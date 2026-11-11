@@ -1,15 +1,13 @@
 --!strict
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
-local GuiService = game:GetService("GuiService")
 
 local LocalPlayer = Players.LocalPlayer
 
 -- ============================================================================
--- 1. GERENCIADOR DE ESCOPO E CICLO DE VIDA (SCOPE / MAID)
+-- 1. GERENCIADOR DE ESCOPO E CICLO DE VIDA (SCOPE)
 -- ============================================================================
 local Scope = {}
 Scope.__index = Scope
@@ -83,52 +81,56 @@ function Scope:Destroy()
 end
 
 -- ============================================================================
--- 2. DEFINIÇÃO DA BIBLIOTECA E DESIGN SYSTEM (ROYALTY)
+-- 2. DEFINIÇÃO DA BIBLIOTECA E TEMAS (ROYALTY)
 -- ============================================================================
 local Royalty = {}
 Royalty.__index = Royalty
 Royalty.Name = "Royalty"
-Royalty.Version = "2.0.0"
+Royalty.Version = "2.1.0"
 
 Royalty.Themes = {
-    Dark = {
-        Name = "Dark",
-        Accent = Color3.fromRGB(94, 129, 244),
-        Background = Color3.fromRGB(15, 16, 21),
-        Sidebar = Color3.fromRGB(20, 22, 29),
-        Surface = Color3.fromRGB(24, 27, 36),
-        SurfaceElevated = Color3.fromRGB(31, 35, 47),
-        SurfaceHover = Color3.fromRGB(37, 42, 56),
-        Border = Color3.fromRGB(48, 53, 69),
-        BorderSubtle = Color3.fromRGB(36, 40, 52),
-        Text = Color3.fromRGB(242, 244, 248),
-        SubText = Color3.fromRGB(168, 174, 190),
-        Muted = Color3.fromRGB(112, 118, 136),
-        Success = Color3.fromRGB(52, 199, 123),
-        Warning = Color3.fromRGB(245, 166, 35),
-        Error = Color3.fromRGB(239, 83, 80)
+    Escuro = {
+        Name = "Escuro",
+        Accent = Color3.fromRGB(88, 124, 244),
+        Background = Color3.fromRGB(16, 18, 24),
+        Sidebar = Color3.fromRGB(20, 22, 30),
+        Surface = Color3.fromRGB(24, 27, 37),
+        SurfaceElevated = Color3.fromRGB(31, 35, 48),
+        SurfaceHover = Color3.fromRGB(38, 43, 58),
+        Border = Color3.fromRGB(48, 54, 72),
+        BorderSubtle = Color3.fromRGB(34, 38, 52),
+        Text = Color3.fromRGB(244, 246, 250),
+        SubText = Color3.fromRGB(176, 182, 198),
+        Muted = Color3.fromRGB(116, 124, 142),
+        Success = Color3.fromRGB(48, 194, 118),
+        Warning = Color3.fromRGB(242, 164, 36),
+        Error = Color3.fromRGB(236, 82, 78)
     },
-    Light = {
-        Name = "Light",
-        Accent = Color3.fromRGB(59, 102, 228),
+    Claro = {
+        Name = "Claro",
+        Accent = Color3.fromRGB(54, 96, 224),
         Background = Color3.fromRGB(244, 246, 250),
-        Sidebar = Color3.fromRGB(235, 238, 245),
+        Sidebar = Color3.fromRGB(235, 239, 246),
         Surface = Color3.fromRGB(255, 255, 255),
         SurfaceElevated = Color3.fromRGB(240, 243, 249),
-        SurfaceHover = Color3.fromRGB(229, 234, 244),
-        Border = Color3.fromRGB(208, 214, 226),
-        BorderSubtle = Color3.fromRGB(224, 228, 238),
-        Text = Color3.fromRGB(22, 25, 34),
-        SubText = Color3.fromRGB(78, 85, 102),
-        Muted = Color3.fromRGB(128, 136, 155),
-        Success = Color3.fromRGB(34, 163, 96),
-        Warning = Color3.fromRGB(217, 130, 18),
-        Error = Color3.fromRGB(214, 58, 55)
+        SurfaceHover = Color3.fromRGB(230, 235, 244),
+        Border = Color3.fromRGB(206, 213, 226),
+        BorderSubtle = Color3.fromRGB(224, 229, 238),
+        Text = Color3.fromRGB(20, 24, 33),
+        SubText = Color3.fromRGB(74, 82, 98),
+        Muted = Color3.fromRGB(128, 136, 154),
+        Success = Color3.fromRGB(32, 158, 92),
+        Warning = Color3.fromRGB(212, 128, 16),
+        Error = Color3.fromRGB(210, 56, 52)
     }
 }
 
+-- Alias de compatibilidade para códigos que passarem "Dark" ou "Light"
+Royalty.Themes.Dark = Royalty.Themes.Escuro
+Royalty.Themes.Light = Royalty.Themes.Claro
+
 Royalty.Tokens = {
-    CornerRadius = {
+    Corner = {
         Window = UDim.new(0, 10),
         Section = UDim.new(0, 8),
         Control = UDim.new(0, 6),
@@ -149,20 +151,18 @@ Royalty.Tokens = {
         Description = 12,
         Small = 11
     },
-    Animation = {
+    Anim = {
         Fast = 0.12,
         Normal = 0.18,
-        Slow = 0.24,
-        EasingStyle = Enum.EasingStyle.Quart,
-        EasingDirection = Enum.EasingDirection.Out
+        Style = Enum.EasingStyle.Quart,
+        Dir = Enum.EasingDirection.Out
     }
 }
 
--- Estado de instância da biblioteca
 Royalty._scope = Scope.new()
 Royalty.Flags = {}
 Royalty.Windows = {}
-Royalty.Theme = table.clone(Royalty.Themes.Dark)
+Royalty.Theme = table.clone(Royalty.Themes.Escuro)
 Royalty.ReducedMotion = false
 Royalty.NotificationsEnabled = true
 Royalty._themeListeners = {}
@@ -171,22 +171,24 @@ Royalty._memoryStorage = {}
 Royalty.StorageAdapter = nil
 
 -- ============================================================================
--- 3. UTILITÁRIOS DE SEGURANÇA, CRIAÇÃO, TEMA E ANIMAÇÃO
+-- 3. UTILITÁRIOS DE SEGURANÇA, ÍCONES GEOMÉTRICOS E ANIMAÇÃO
 -- ============================================================================
-local function safeCall(label: string, fn: ((...any) -> ...any)?, ...: any): (boolean, any)
+local function safeCall(label: string, fn: ((...any) -> ...any)?, ...: any): (boolean, ...any)
     if type(fn) ~= "function" then
-        return true, nil
+        return true
     end
     local args = table.pack(...)
-    local ok, result = xpcall(function()
+    local results = table.pack(xpcall(function()
         return fn(table.unpack(args, 1, args.n))
     end, function(err)
         return debug.traceback(tostring(err), 2)
-    end)
+    end))
+    local ok = results[1]
     if not ok then
-        warn(string.format("[Royalty] Erro no callback '%s':\n%s", label, tostring(result)))
+        warn(string.format("[Royalty] Erro no callback '%s':\n%s", label, tostring(results[2])))
+        return false, results[2]
     end
-    return ok, result
+    return true, table.unpack(results, 2, results.n)
 end
 
 local function resolveParent(customParent: Instance?): Instance
@@ -235,6 +237,91 @@ local function create(className: string, props: { [string]: any }?, children: { 
     return inst
 end
 
+-- Cria um ícone de seta (chevron) geométrico puro com 2 barras (nunca vira quadrado de fonte)
+local function createChevronIcon(parent: Instance): (Frame, (isOpen: boolean) -> (), (color: Color3) -> ())
+    local holder = create("Frame", {
+        Size = UDim2.fromOffset(14, 14),
+        Position = UDim2.new(1, -22, 0.5, -7),
+        BackgroundTransparency = 1,
+        Parent = parent
+    })
+
+    local leftBar = create("Frame", {
+        Size = UDim2.fromOffset(6, 2),
+        Position = UDim2.fromOffset(2, 6),
+        AnchorPoint = Vector2.new(0, 0.5),
+        Rotation = 40,
+        BorderSizePixel = 0,
+        Parent = holder
+    }, {
+        create("UICorner", { CornerRadius = UDim.new(1, 0) })
+    })
+
+    local rightBar = create("Frame", {
+        Size = UDim2.fromOffset(6, 2),
+        Position = UDim2.fromOffset(6, 6),
+        AnchorPoint = Vector2.new(0, 0.5),
+        Rotation = -40,
+        BorderSizePixel = 0,
+        Parent = holder
+    }, {
+        create("UICorner", { CornerRadius = UDim.new(1, 0) })
+    })
+
+    local function setOpen(isOpen: boolean)
+        Royalty:Animate(leftBar, Royalty.Tokens.Anim.Fast, { Rotation = isOpen and -40 or 40 })
+        Royalty:Animate(rightBar, Royalty.Tokens.Anim.Fast, { Rotation = isOpen and 40 or -40 })
+    end
+
+    local function setColor(color: Color3)
+        leftBar.BackgroundColor3 = color
+        rightBar.BackgroundColor3 = color
+    end
+
+    return holder, setOpen, setColor
+end
+
+-- Cria um ícone "X" geométrico puro para botões de fechar
+local function createCloseIcon(parent: Instance): (TextButton, (color: Color3) -> ())
+    local btn = create("TextButton", {
+        Size = UDim2.fromOffset(18, 18),
+        Position = UDim2.new(1, -18, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        AutoButtonColor = false,
+        Parent = parent
+    })
+
+    local bar1 = create("Frame", {
+        Size = UDim2.fromOffset(12, 2),
+        Position = UDim2.fromScale(0.5, 0.5),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Rotation = 45,
+        BorderSizePixel = 0,
+        Parent = btn
+    }, {
+        create("UICorner", { CornerRadius = UDim.new(1, 0) })
+    })
+
+    local bar2 = create("Frame", {
+        Size = UDim2.fromOffset(12, 2),
+        Position = UDim2.fromScale(0.5, 0.5),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Rotation = -45,
+        BorderSizePixel = 0,
+        Parent = btn
+    }, {
+        create("UICorner", { CornerRadius = UDim.new(1, 0) })
+    })
+
+    local function setColor(color: Color3)
+        bar1.BackgroundColor3 = color
+        bar2.BackgroundColor3 = color
+    end
+
+    return btn, setColor
+end
+
 function Royalty:Animate(instance: Instance, duration: number, props: { [string]: any }, style: Enum.EasingStyle?, direction: Enum.EasingDirection?): Tween?
     if not instance then return nil end
 
@@ -254,7 +341,7 @@ function Royalty:Animate(instance: Instance, duration: number, props: { [string]
         end
     end
 
-    local actualDuration = self.ReducedMotion and 0 or (duration or self.Tokens.Animation.Normal)
+    local actualDuration = self.ReducedMotion and 0 or (duration or self.Tokens.Anim.Normal)
     if actualDuration <= 0 then
         for propName, val in pairs(props) do
             pcall(function()
@@ -268,8 +355,8 @@ function Royalty:Animate(instance: Instance, duration: number, props: { [string]
         instance,
         TweenInfo.new(
             actualDuration,
-            style or self.Tokens.Animation.EasingStyle,
-            direction or self.Tokens.Animation.EasingDirection
+            style or self.Tokens.Anim.Style,
+            direction or self.Tokens.Anim.Dir
         ),
         props
     )
@@ -311,7 +398,7 @@ function Royalty:BindThemeProperty(scope: any, instance: Instance, property: str
         if instance and instance.Parent ~= nil then
             local color = theme[tokenName]
             if color then
-                self:Animate(instance, self.Tokens.Animation.Fast, { [property] = color })
+                self:Animate(instance, self.Tokens.Anim.Fast, { [property] = color })
             end
         end
     end)
@@ -340,7 +427,7 @@ function Royalty:SetTheme(themeNameOrTable: string | { [string]: any })
     end
 
     if not sourceTheme then
-        warn("[Royalty] Tema inválido informado em SetTheme: " .. tostring(themeNameOrTable))
+        warn("[Royalty] Tema inválido em SetTheme: " .. tostring(themeNameOrTable))
         return
     end
 
@@ -357,7 +444,7 @@ end
 
 function Royalty:SetAccentColor(newColor: Color3)
     if typeof(newColor) ~= "Color3" then
-        warn("[Royalty] SetAccentColor requer um valor Color3.")
+        warn("[Royalty] SetAccentColor requer um Color3.")
         return
     end
     self.Theme.Accent = newColor
@@ -370,7 +457,7 @@ function Royalty:SetReducedMotion(enabled: boolean)
 end
 
 local function formatKeyName(keyEnum: any): string
-    if not keyEnum then return "None" end
+    if not keyEnum then return "Nenhum" end
     local name = tostring(keyEnum.Name or keyEnum)
     local shortNames = {
         RightShift = "RShift",
@@ -418,7 +505,7 @@ local function hexToColor(hex: string): Color3?
 end
 
 -- ============================================================================
--- 4. GERENCIAMENTO DE PERSISTÊNCIA (ADAPTADOR OPCIONAL + MEMÓRIA)
+-- 4. PERSISTÊNCIA (ADAPTADOR OPCIONAL + MEMÓRIA)
 -- ============================================================================
 function Royalty:SetStorageAdapter(adapter: { Save: (key: string, data: { [string]: any }) -> (boolean, string?), Load: (key: string) -> (boolean, any) }?)
     self.StorageAdapter = adapter
@@ -450,15 +537,16 @@ function Royalty:_serializeFlags(): { [string]: any }
 end
 
 function Royalty:SaveConfiguration(profileName: string?): (boolean, string)
-    local key = profileName or "Default"
+    local trimmed = string.gsub(tostring(profileName or ""), "^%s*(.-)%s*$", "%1")
+    local key = (trimmed ~= "") and trimmed or "Padrao"
     local payload = self:_serializeFlags()
 
     if self.StorageAdapter and type(self.StorageAdapter.Save) == "function" then
         local ok, status, err = safeCall("StorageAdapter.Save", self.StorageAdapter.Save, key, payload)
         if not ok or status == false then
-            return false, tostring(err or "Falha ao gravar no StorageAdapter.")
+            return false, tostring(err or "Falha ao gravar no adaptador.")
         end
-        return true, string.format("Perfil '%s' salvo via adaptador.", key)
+        return true, string.format("Perfil '%s' salvo com sucesso.", key)
     end
 
     self._memoryStorage[key] = payload
@@ -466,13 +554,14 @@ function Royalty:SaveConfiguration(profileName: string?): (boolean, string)
 end
 
 function Royalty:LoadConfiguration(profileName: string?): (boolean, string)
-    local key = profileName or "Default"
+    local trimmed = string.gsub(tostring(profileName or ""), "^%s*(.-)%s*$", "%1")
+    local key = (trimmed ~= "") and trimmed or "Padrao"
     local payload = nil
 
     if self.StorageAdapter and type(self.StorageAdapter.Load) == "function" then
         local ok, status, data = safeCall("StorageAdapter.Load", self.StorageAdapter.Load, key)
         if not ok or status == false or type(data) ~= "table" then
-            return false, string.format("Não foi possível carregar o perfil '%s' do adaptador.", key)
+            return false, string.format("Não foi possível carregar o perfil '%s'.", key)
         end
         payload = data
     else
@@ -513,7 +602,7 @@ function Royalty:LoadConfiguration(profileName: string?): (boolean, string)
 end
 
 -- ============================================================================
--- 5. CONTAINER RAIZ, BLUR COMPARTILHADO E SISTEMA DE NOTIFICAÇÕES
+-- 5. CONTAINER RAIZ, BLUR + ESCURECIMENTO DE FUNDO E NOTIFICAÇÕES
 -- ============================================================================
 function Royalty:_ensureRoot(customParent: Instance?)
     if self._rootGui and self._rootGui.Parent then
@@ -531,6 +620,18 @@ function Royalty:_ensureRoot(customParent: Instance?)
     self._scope:Add(gui)
     self._rootGui = gui
 
+    local backdropDim = create("Frame", {
+        Name = "BackdropDim",
+        Size = UDim2.fromScale(1, 1),
+        BackgroundColor3 = Color3.fromRGB(6, 8, 12),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 0,
+        Parent = gui
+    })
+    self._backdropDim = backdropDim
+
     local blur = create("BlurEffect", {
         Name = "RoyaltyDepthBlur",
         Size = 0,
@@ -542,9 +643,10 @@ function Royalty:_ensureRoot(customParent: Instance?)
 
     local notifHolder = create("Frame", {
         Name = "NotificationStack",
-        Size = UDim2.new(0, 300, 1, -32),
-        Position = UDim2.new(1, -316, 0, 16),
+        Size = UDim2.new(0, 290, 1, -32),
+        Position = UDim2.new(1, -306, 0, 16),
         BackgroundTransparency = 1,
+        ZIndex = 100,
         Parent = gui
     }, {
         create("UIListLayout", {
@@ -560,7 +662,6 @@ function Royalty:_ensureRoot(customParent: Instance?)
 end
 
 function Royalty:_syncBlur()
-    if not self._blurEffect or not self._blurEffect.Parent then return end
     local shouldBlur = false
     for _, win in ipairs(self.Windows) do
         if not win._destroyed and win.Visible and win.UseBlur then
@@ -569,19 +670,39 @@ function Royalty:_syncBlur()
         end
     end
 
-    if shouldBlur then
-        self._blurEffect.Enabled = true
-        self:Animate(self._blurEffect, self.Tokens.Animation.Normal, { Size = 10 })
-    else
-        local tw = self:Animate(self._blurEffect, self.Tokens.Animation.Fast, { Size = 0 })
-        if tw then
-            tw.Completed:Once(function()
-                if self._blurEffect and self._blurEffect.Size <= 0.5 then
-                    self._blurEffect.Enabled = false
-                end
-            end)
+    if self._blurEffect and self._blurEffect.Parent then
+        if shouldBlur then
+            self._blurEffect.Enabled = true
+            self:Animate(self._blurEffect, self.Tokens.Anim.Normal, { Size = 14 })
         else
-            self._blurEffect.Enabled = false
+            local tw = self:Animate(self._blurEffect, self.Tokens.Anim.Fast, { Size = 0 })
+            if tw then
+                tw.Completed:Once(function()
+                    if self._blurEffect and self._blurEffect.Size <= 0.5 then
+                        self._blurEffect.Enabled = false
+                    end
+                end)
+            else
+                self._blurEffect.Enabled = false
+            end
+        end
+    end
+
+    if self._backdropDim and self._backdropDim.Parent then
+        if shouldBlur then
+            self._backdropDim.Visible = true
+            self:Animate(self._backdropDim, self.Tokens.Anim.Normal, { BackgroundTransparency = 0.45 })
+        else
+            local twDim = self:Animate(self._backdropDim, self.Tokens.Anim.Fast, { BackgroundTransparency = 1 })
+            if twDim then
+                twDim.Completed:Once(function()
+                    if self._backdropDim and self._backdropDim.BackgroundTransparency >= 0.98 then
+                        self._backdropDim.Visible = false
+                    end
+                end)
+            else
+                self._backdropDim.Visible = false
+            end
         end
     end
 end
@@ -600,16 +721,12 @@ function Royalty:Notify(cfg: { Title: string?, Content: string?, Duration: numbe
     local dismissed = false
 
     local typeToken = "Accent"
-    local badgeSymbol = "i"
-    if nType == "success" then
+    if nType == "success" or nType == "sucesso" then
         typeToken = "Success"
-        badgeSymbol = "✓"
-    elseif nType == "warning" then
+    elseif nType == "warning" or nType == "aviso" then
         typeToken = "Warning"
-        badgeSymbol = "!"
-    elseif nType == "error" then
+    elseif nType == "error" or nType == "erro" then
         typeToken = "Error"
-        badgeSymbol = "×"
     end
 
     local wrapper = create("Frame", {
@@ -625,13 +742,13 @@ function Royalty:Notify(cfg: { Title: string?, Content: string?, Duration: numbe
         Name = "Card",
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
-        Position = UDim2.new(0, 24, 0, 0),
+        Position = UDim2.new(0, 20, 0, 0),
         BackgroundColor3 = self.Theme.Surface,
         BackgroundTransparency = 1,
         ClipsDescendants = true,
         Parent = wrapper
     }, {
-        create("UICorner", { CornerRadius = self.Tokens.CornerRadius.Section })
+        create("UICorner", { CornerRadius = self.Tokens.Corner.Section })
     })
     self:BindThemeProperty(notifScope, card, "BackgroundColor3", "Surface")
 
@@ -668,22 +785,20 @@ function Royalty:Notify(cfg: { Title: string?, Content: string?, Duration: numbe
         Parent = contentPad
     })
 
-    local badge = create("TextLabel", {
-        Size = UDim2.new(0, 18, 0, 18),
+    local statusDot = create("Frame", {
+        Size = UDim2.fromOffset(8, 8),
+        Position = UDim2.new(0, 2, 0.5, -4),
         BackgroundColor3 = self.Theme[typeToken],
-        Text = badgeSymbol,
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        Font = self.Tokens.Font.Bold,
-        TextSize = 11,
+        BorderSizePixel = 0,
         Parent = topRow
     }, {
-        create("UICorner", { CornerRadius = self.Tokens.CornerRadius.Pill })
+        create("UICorner", { CornerRadius = self.Tokens.Corner.Pill })
     })
-    self:BindThemeProperty(notifScope, badge, "BackgroundColor3", typeToken)
+    self:BindThemeProperty(notifScope, statusDot, "BackgroundColor3", typeToken)
 
     local titleLbl = create("TextLabel", {
-        Size = UDim2.new(1, -44, 1, 0),
-        Position = UDim2.new(0, 26, 0, 0),
+        Size = UDim2.new(1, -38, 1, 0),
+        Position = UDim2.new(0, 16, 0, 0),
         BackgroundTransparency = 1,
         Text = titleText,
         TextColor3 = self.Theme.Text,
@@ -695,24 +810,17 @@ function Royalty:Notify(cfg: { Title: string?, Content: string?, Duration: numbe
     })
     self:BindThemeProperty(notifScope, titleLbl, "TextColor3", "Text")
 
-    local closeBtn = create("TextButton", {
-        Size = UDim2.new(0, 18, 0, 18),
-        Position = UDim2.new(1, -18, 0, 0),
-        BackgroundTransparency = 1,
-        Text = "×",
-        TextColor3 = self.Theme.Muted,
-        Font = self.Tokens.Font.Bold,
-        TextSize = 14,
-        Parent = topRow
-    })
-    self:BindThemeProperty(notifScope, closeBtn, "TextColor3", "Muted")
+    local closeBtn, setCloseColor = createCloseIcon(topRow)
+    self:OnThemeChanged(notifScope, function(theme)
+        setCloseColor(theme.Muted)
+    end)
 
     if contentText ~= "" then
         local bodyLbl = create("TextLabel", {
             LayoutOrder = 2,
-            Size = UDim2.new(1, -26, 0, 0),
+            Size = UDim2.new(1, -16, 0, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
-            Position = UDim2.new(0, 26, 0, 0),
+            Position = UDim2.new(0, 16, 0, 0),
             BackgroundTransparency = 1,
             Text = contentText,
             TextColor3 = self.Theme.SubText,
@@ -742,12 +850,11 @@ function Royalty:Notify(cfg: { Title: string?, Content: string?, Duration: numbe
     })
     self:BindThemeProperty(notifScope, progressFill, "BackgroundColor3", typeToken)
 
-    -- Animação de entrada
-    self:Animate(card, self.Tokens.Animation.Normal, {
+    self:Animate(card, self.Tokens.Anim.Normal, {
         Position = UDim2.new(0, 0, 0, 0),
         BackgroundTransparency = 0
     })
-    self:Animate(stroke, self.Tokens.Animation.Normal, { Transparency = 0 })
+    self:Animate(stroke, self.Tokens.Anim.Normal, { Transparency = 0 })
 
     if not self.ReducedMotion then
         TweenService:Create(
@@ -760,11 +867,11 @@ function Royalty:Notify(cfg: { Title: string?, Content: string?, Duration: numbe
     local function dismiss()
         if dismissed then return end
         dismissed = true
-        local tw = self:Animate(card, self.Tokens.Animation.Fast, {
-            Position = UDim2.new(0, 24, 0, 0),
+        local tw = self:Animate(card, self.Tokens.Anim.Fast, {
+            Position = UDim2.new(0, 20, 0, 0),
             BackgroundTransparency = 1
         })
-        self:Animate(stroke, self.Tokens.Animation.Fast, { Transparency = 1 })
+        self:Animate(stroke, self.Tokens.Anim.Fast, { Transparency = 1 })
         if tw then
             tw.Completed:Once(function()
                 notifScope:Destroy()
@@ -775,8 +882,7 @@ function Royalty:Notify(cfg: { Title: string?, Content: string?, Duration: numbe
     end
 
     notifScope:Connect(closeBtn.Activated, dismiss)
-    local timerThread = task.delay(duration, dismiss)
-    notifScope:Add(timerThread)
+    notifScope:Add(task.delay(duration, dismiss))
 
     return {
         Dismiss = dismiss
@@ -784,7 +890,7 @@ function Royalty:Notify(cfg: { Title: string?, Content: string?, Duration: numbe
 end
 
 -- ============================================================================
--- 6. CRIAÇÃO DE JANELA, LOADING SCREEN E NAVEGAÇÃO
+-- 6. CRIAÇÃO DE JANELA E NAVEGAÇÃO
 -- ============================================================================
 function Royalty:CreateWindow(cfg: { [string]: any }?)
     cfg = cfg or {}
@@ -802,8 +908,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
     local winScope = self._scope:NewChild()
     local titleText = tostring(cfg.Title or "Royalty")
-    local subTitleText = tostring(cfg.SubTitle or "v2.0")
-    local rawSize: UDim2 = typeof(cfg.Size) == "UDim2" and cfg.Size or UDim2.fromOffset(620, 420)
+    local subTitleText = tostring(cfg.SubTitle or "v2.1")
+    local rawSize: UDim2 = typeof(cfg.Size) == "UDim2" and cfg.Size or UDim2.fromOffset(640, 440)
     local toggleKey = cfg.ToggleKey or Enum.KeyCode.RightShift
     local useBlur = (cfg.Blur == true)
     local uiScaleValue = math.clamp(tonumber(cfg.Scale) or 1, 0.75, 1.35)
@@ -825,14 +931,13 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
     }
     table.insert(self.Windows, Window)
 
-    -- Cálculo seguro de tamanho e centralização considerando a câmera atual
     local function computeCenteredBounds(requestedSize: UDim2): (UDim2, UDim2)
         local cam = workspace.CurrentCamera
         local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
         local w = requestedSize.X.Scale * vp.X + requestedSize.X.Offset
         local h = requestedSize.Y.Scale * vp.Y + requestedSize.Y.Offset
-        w = math.clamp(w, 340, math.max(360, vp.X - 24))
-        h = math.clamp(h, 260, math.max(280, vp.Y - 36))
+        w = math.clamp(w, 380, math.max(400, vp.X - 32))
+        h = math.clamp(h, 280, math.max(300, vp.Y - 48))
         local finalSize = UDim2.fromOffset(math.floor(w), math.floor(h))
         local finalPos = UDim2.fromOffset(math.floor((vp.X - w) * 0.5), math.floor((vp.Y - h) * 0.5))
         return finalSize, finalPos
@@ -847,9 +952,10 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
         BackgroundColor3 = self.Theme.Background,
         GroupTransparency = 1,
         ClipsDescendants = true,
+        ZIndex = 10,
         Parent = self._rootGui
     }, {
-        create("UICorner", { CornerRadius = self.Tokens.CornerRadius.Window })
+        create("UICorner", { CornerRadius = self.Tokens.Corner.Window })
     })
     winScope:Add(Main)
     self:BindThemeProperty(winScope, Main, "BackgroundColor3", "Background")
@@ -866,10 +972,10 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
     })
     self:BindThemeProperty(winScope, MainStroke, "Color", "Border")
 
-    -- Sidebar
+    -- Sidebar Lateral
     local Sidebar = create("Frame", {
         Name = "Sidebar",
-        Size = UDim2.new(0, 170, 1, 0),
+        Size = UDim2.new(0, 164, 1, 0),
         BackgroundColor3 = self.Theme.Sidebar,
         BorderSizePixel = 0,
         Parent = Main
@@ -885,28 +991,27 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
     })
     self:BindThemeProperty(winScope, SidebarDivider, "BackgroundColor3", "BorderSubtle")
 
-    -- Brand Header
     local BrandHeader = create("Frame", {
         Name = "BrandHeader",
-        Size = UDim2.new(1, 0, 0, 58),
+        Size = UDim2.new(1, 0, 0, 56),
         BackgroundTransparency = 1,
         Parent = Sidebar
     })
 
     local BrandIndicator = create("Frame", {
-        Size = UDim2.new(0, 8, 0, 22),
-        Position = UDim2.new(0, 14, 0, 18),
+        Size = UDim2.fromOffset(6, 20),
+        Position = UDim2.fromOffset(14, 18),
         BackgroundColor3 = self.Theme.Accent,
         BorderSizePixel = 0,
         Parent = BrandHeader
     }, {
-        create("UICorner", { CornerRadius = self.Tokens.CornerRadius.Pill })
+        create("UICorner", { CornerRadius = self.Tokens.Corner.Pill })
     })
     self:BindThemeProperty(winScope, BrandIndicator, "BackgroundColor3", "Accent")
 
     local WinTitleLbl = create("TextLabel", {
-        Size = UDim2.new(1, -38, 0, 20),
-        Position = UDim2.new(0, 30, 0, 14),
+        Size = UDim2.new(1, -36, 0, 20),
+        Position = UDim2.fromOffset(28, 12),
         BackgroundTransparency = 1,
         Text = titleText,
         TextColor3 = self.Theme.Text,
@@ -919,8 +1024,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
     self:BindThemeProperty(winScope, WinTitleLbl, "TextColor3", "Text")
 
     local WinSubLbl = create("TextLabel", {
-        Size = UDim2.new(1, -38, 0, 16),
-        Position = UDim2.new(0, 30, 0, 33),
+        Size = UDim2.new(1, -36, 0, 14),
+        Position = UDim2.fromOffset(28, 32),
         BackgroundTransparency = 1,
         Text = subTitleText,
         TextColor3 = self.Theme.Muted,
@@ -934,8 +1039,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
     local TabList = create("ScrollingFrame", {
         Name = "TabList",
-        Size = UDim2.new(1, -16, 1, -102),
-        Position = UDim2.new(0, 8, 0, 62),
+        Size = UDim2.new(1, -16, 1, -98),
+        Position = UDim2.fromOffset(8, 58),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ScrollBarThickness = 2,
@@ -960,7 +1065,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
     local FooterDivider = create("Frame", {
         Size = UDim2.new(1, -24, 0, 1),
-        Position = UDim2.new(0, 12, 0, 0),
+        Position = UDim2.fromOffset(12, 0),
         BackgroundColor3 = self.Theme.BorderSubtle,
         BorderSizePixel = 0,
         Parent = FooterFrame
@@ -969,9 +1074,9 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
     local FooterKeyLabel = create("TextLabel", {
         Size = UDim2.new(1, -24, 1, -2),
-        Position = UDim2.new(0, 12, 0, 2),
+        Position = UDim2.fromOffset(12, 2),
         BackgroundTransparency = 1,
-        Text = "Alternar UI: [" .. formatKeyName(toggleKey) .. "]",
+        Text = "Menu: [" .. formatKeyName(toggleKey) .. "]",
         TextColor3 = self.Theme.Muted,
         Font = self.Tokens.Font.Medium,
         TextSize = self.Tokens.TextSize.Small,
@@ -980,11 +1085,11 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
     })
     self:BindThemeProperty(winScope, FooterKeyLabel, "TextColor3", "Muted")
 
-    -- Área Principal de Conteúdo e Cabeçalho da Página
+    -- Área de Conteúdo
     local ContentArea = create("Frame", {
         Name = "ContentArea",
-        Size = UDim2.new(1, -170, 1, 0),
-        Position = UDim2.new(0, 170, 0, 0),
+        Size = UDim2.new(1, -164, 1, 0),
+        Position = UDim2.fromOffset(164, 0),
         BackgroundTransparency = 1,
         Parent = Main
     })
@@ -1006,8 +1111,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
     self:BindThemeProperty(winScope, TopHeaderLine, "BackgroundColor3", "BorderSubtle")
 
     local ActivePageTitle = create("TextLabel", {
-        Size = UDim2.new(0.5, -24, 1, 0),
-        Position = UDim2.new(0, 18, 0, 0),
+        Size = UDim2.new(1, -210, 1, 0),
+        Position = UDim2.fromOffset(18, 0),
         BackgroundTransparency = 1,
         Text = "",
         TextColor3 = self.Theme.Text,
@@ -1019,14 +1124,13 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
     })
     self:BindThemeProperty(winScope, ActivePageTitle, "TextColor3", "Text")
 
-    -- Caixa de Busca Global na Página Ativa
     local SearchContainer = create("Frame", {
-        Size = UDim2.new(0, 185, 0, 30),
-        Position = UDim2.new(1, -200, 0.5, -15),
+        Size = UDim2.fromOffset(176, 30),
+        Position = UDim2.new(1, -194, 0.5, -15),
         BackgroundColor3 = self.Theme.Surface,
         Parent = TopHeaderBar
     }, {
-        create("UICorner", { CornerRadius = self.Tokens.CornerRadius.Control })
+        create("UICorner", { CornerRadius = self.Tokens.Corner.Control })
     })
     self:BindThemeProperty(winScope, SearchContainer, "BackgroundColor3", "Surface")
 
@@ -1039,10 +1143,10 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
     local SearchBox = create("TextBox", {
         Size = UDim2.new(1, -16, 1, 0),
-        Position = UDim2.new(0, 8, 0, 0),
+        Position = UDim2.fromOffset(8, 0),
         BackgroundTransparency = 1,
         Text = "",
-        PlaceholderText = "Buscar controle ou seção...",
+        PlaceholderText = "Buscar...",
         PlaceholderColor3 = self.Theme.Muted,
         TextColor3 = self.Theme.Text,
         Font = self.Tokens.Font.Regular,
@@ -1057,18 +1161,18 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
     local PagesHolder = create("Frame", {
         Name = "PagesHolder",
         Size = UDim2.new(1, 0, 1, -52),
-        Position = UDim2.new(0, 0, 0, 52),
+        Position = UDim2.fromOffset(0, 52),
         BackgroundTransparency = 1,
         ClipsDescendants = true,
         Parent = ContentArea
     })
 
     local EmptySearchBanner = create("TextLabel", {
-        Size = UDim2.new(1, -32, 0, 40),
-        Position = UDim2.new(0, 16, 0, 24),
+        Size = UDim2.new(1, -36, 0, 40),
+        Position = UDim2.fromOffset(18, 24),
         BackgroundTransparency = 1,
         Visible = false,
-        Text = "Nenhum controle encontrado para a busca atual.",
+        Text = "Nenhum controle encontrado para esta busca.",
         TextColor3 = self.Theme.Muted,
         Font = self.Tokens.Font.Medium,
         TextSize = self.Tokens.TextSize.Control,
@@ -1076,9 +1180,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
     })
     self:BindThemeProperty(winScope, EmptySearchBanner, "TextColor3", "Muted")
 
-    -- ========================================================================
-    -- ARRASTO DIRETO, SUAVE E COM LIMITES DE TELA (MOUSE + TOUCH)
-    -- ========================================================================
+    -- Arrasto da Janela
     local dragging = false
     local dragInput = nil
     local dragStartPos = Vector2.zero
@@ -1109,9 +1211,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
             local rawX = windowStartPos.X.Offset + delta.X
             local rawY = windowStartPos.Y.Offset + delta.Y
 
-            -- Impede que a janela seja arrastada para fora da tela
-            local minX = -math.floor(absSize.X * 0.65)
-            local maxX = math.floor(vp.X - absSize.X * 0.35)
+            local minX = -math.floor(absSize.X * 0.6)
+            local maxX = math.floor(vp.X - absSize.X * 0.4)
             local minY = 0
             local maxY = math.floor(vp.Y - 48)
 
@@ -1129,7 +1230,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
         end
     end)
 
-    -- Filtro de Busca em Tempo Real
+    -- Busca em Tempo Real
     local function applySearchFilter()
         local activeTab = Window.ActiveTab
         if not activeTab then return end
@@ -1142,6 +1243,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 for _, item in ipairs(sec.Items) do
                     item.Instance.Visible = true
                 end
+                sec:_updateHeight()
             end
             activeTab:_updateColumns()
             return
@@ -1166,6 +1268,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
             end
 
             sec.Frame.Visible = secMatches or anyItemMatches
+            sec:_updateHeight()
             if sec.Frame.Visible then
                 anyMatchInTab = true
             end
@@ -1177,32 +1280,43 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
     winScope:Connect(SearchBox:GetPropertyChangedSignal("Text"), applySearchFilter)
     winScope:Connect(SearchBox.Focused, function()
-        Royalty:Animate(SearchStroke, Royalty.Tokens.Animation.Fast, { Color = Royalty.Theme.Accent })
+        Royalty:Animate(SearchStroke, Royalty.Tokens.Anim.Fast, { Color = Royalty.Theme.Accent })
     end)
     winScope:Connect(SearchBox.FocusLost, function()
-        Royalty:Animate(SearchStroke, Royalty.Tokens.Animation.Fast, { Color = Royalty.Theme.BorderSubtle })
+        Royalty:Animate(SearchStroke, Royalty.Tokens.Anim.Fast, { Color = Royalty.Theme.BorderSubtle })
     end)
 
-    -- ========================================================================
-    -- MÉTODOS DE JANELA (TOGGLE COM TRANSIÇÃO REAL, SCALE, DESTROY)
-    -- ========================================================================
+    -- Métodos de Janela
     function Window:SetScale(newScale: number)
         self.Scale = math.clamp(tonumber(newScale) or 1, 0.75, 1.35)
         Royalty.Flags["Royalty_UIScale"] = self.Scale
         if self.Visible then
-            Royalty:Animate(WinScale, Royalty.Tokens.Animation.Fast, { Scale = self.Scale })
+            Royalty:Animate(WinScale, Royalty.Tokens.Anim.Fast, { Scale = self.Scale })
+        end
+        if self.ActiveTab then
+            task.defer(function()
+                if self.ActiveTab then
+                    self.ActiveTab:_updateColumns()
+                end
+            end)
         end
     end
 
     function Window:SetToggleKey(newKey: Enum.KeyCode?)
         self.ToggleKey = newKey
-        FooterKeyLabel.Text = "Alternar UI: [" .. formatKeyName(newKey) .. "]"
+        FooterKeyLabel.Text = "Menu: [" .. formatKeyName(newKey) .. "]"
         Royalty.Flags["Royalty_ToggleKey"] = newKey
     end
 
     function Window:Toggle(forcedState: boolean?)
         if self._destroyed then return end
-        local targetState = (forcedState ~= nil) and (forcedState == true) or (not self.Visible)
+        local targetState: boolean
+        if forcedState ~= nil then
+            targetState = (forcedState == true)
+        else
+            targetState = not self.Visible
+        end
+
         if self.Visible == targetState and self._transitionId > 0 then
             return
         end
@@ -1220,16 +1334,16 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 WinScale.Scale = self.Scale
             else
                 WinScale.Scale = self.Scale * 0.96
-                Royalty:Animate(Main, Royalty.Tokens.Animation.Normal, { GroupTransparency = 0 })
-                Royalty:Animate(WinScale, Royalty.Tokens.Animation.Normal, { Scale = self.Scale })
+                Royalty:Animate(Main, Royalty.Tokens.Anim.Normal, { GroupTransparency = 0 })
+                Royalty:Animate(WinScale, Royalty.Tokens.Anim.Normal, { Scale = self.Scale })
             end
         else
             if Royalty.ReducedMotion then
                 Main.GroupTransparency = 1
                 Main.Visible = false
             else
-                local fadeOut = Royalty:Animate(Main, Royalty.Tokens.Animation.Fast, { GroupTransparency = 1 })
-                Royalty:Animate(WinScale, Royalty.Tokens.Animation.Fast, { Scale = self.Scale * 0.96 })
+                local fadeOut = Royalty:Animate(Main, Royalty.Tokens.Anim.Fast, { GroupTransparency = 1 })
+                Royalty:Animate(WinScale, Royalty.Tokens.Anim.Fast, { Scale = self.Scale * 0.96 })
                 if fadeOut then
                     fadeOut.Completed:Once(function()
                         if self._transitionId == currentTransition and not self.Visible and Main and Main.Parent then
@@ -1269,16 +1383,14 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
         end
     end)
 
-    -- ========================================================================
-    -- TELA DE CARREGAMENTO OPCIONAL (SOMENTE QUANDO HÁ TAREFAS REAIS)
-    -- ========================================================================
+    -- Tela de Carregamento Opcional
     local initTasks = cfg.InitTasks
     local showLoading = (cfg.LoadingScreen ~= false) and (type(initTasks) == "table" and #initTasks > 0 or type(initTasks) == "function")
 
     if showLoading then
         local LoadingOverlay = create("Frame", {
             Name = "LoadingOverlay",
-            Size = UDim2.new(1, 0, 1, 0),
+            Size = UDim2.fromScale(1, 1),
             BackgroundColor3 = self.Theme.Background,
             ZIndex = 50,
             Active = true,
@@ -1288,7 +1400,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
         local LoadTitle = create("TextLabel", {
             Size = UDim2.new(1, -48, 0, 24),
-            Position = UDim2.new(0, 24, 0.5, -52),
+            Position = UDim2.new(0, 24, 0.5, -50),
             BackgroundTransparency = 1,
             ZIndex = 51,
             Text = titleText,
@@ -1301,10 +1413,10 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
         local LoadStatus = create("TextLabel", {
             Size = UDim2.new(1, -48, 0, 18),
-            Position = UDim2.new(0, 24, 0.5, -24),
+            Position = UDim2.new(0, 24, 0.5, -22),
             BackgroundTransparency = 1,
             ZIndex = 51,
-            Text = "Inicializando recursos...",
+            Text = "Inicializando...",
             TextColor3 = self.Theme.SubText,
             Font = self.Tokens.Font.Regular,
             TextSize = self.Tokens.TextSize.Description,
@@ -1313,41 +1425,41 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
         self:BindThemeProperty(winScope, LoadStatus, "TextColor3", "SubText")
 
         local BarTrack = create("Frame", {
-            Size = UDim2.new(0, 260, 0, 6),
-            Position = UDim2.new(0.5, -130, 0.5, 6),
+            Size = UDim2.fromOffset(240, 5),
+            Position = UDim2.new(0.5, -120, 0.5, 6),
             BackgroundColor3 = self.Theme.SurfaceElevated,
             BorderSizePixel = 0,
             ZIndex = 51,
             ClipsDescendants = true,
             Parent = LoadingOverlay
         }, {
-            create("UICorner", { CornerRadius = self.Tokens.CornerRadius.Pill })
+            create("UICorner", { CornerRadius = self.Tokens.Corner.Pill })
         })
 
         local BarFill = create("Frame", {
-            Size = UDim2.new(0, 0, 1, 0),
+            Size = UDim2.fromScale(0, 1),
             BackgroundColor3 = self.Theme.Accent,
             BorderSizePixel = 0,
             ZIndex = 52,
             Parent = BarTrack
         }, {
-            create("UICorner", { CornerRadius = self.Tokens.CornerRadius.Pill })
+            create("UICorner", { CornerRadius = self.Tokens.Corner.Pill })
         })
         self:BindThemeProperty(winScope, BarFill, "BackgroundColor3", "Accent")
 
         local SkipBtn = create("TextButton", {
-            Size = UDim2.new(0, 120, 0, 28),
-            Position = UDim2.new(0.5, -60, 0.5, 28),
+            Size = UDim2.fromOffset(110, 28),
+            Position = UDim2.new(0.5, -55, 0.5, 26),
             BackgroundColor3 = self.Theme.SurfaceElevated,
             ZIndex = 51,
             Visible = (cfg.AllowSkipLoading == true),
-            Text = "Ignorar",
+            Text = "Pular",
             TextColor3 = self.Theme.SubText,
             Font = self.Tokens.Font.Medium,
             TextSize = self.Tokens.TextSize.Small,
             Parent = LoadingOverlay
         }, {
-            create("UICorner", { CornerRadius = self.Tokens.CornerRadius.Control }),
+            create("UICorner", { CornerRadius = self.Tokens.Corner.Control }),
             create("UIStroke", { Color = self.Theme.Border, Thickness = 1 })
         })
 
@@ -1355,12 +1467,12 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
         local function closeLoadingOverlay()
             if overlayClosed or not LoadingOverlay or not LoadingOverlay.Parent then return end
             overlayClosed = true
-            local tw = self:Animate(LoadingOverlay, self.Tokens.Animation.Normal, { BackgroundTransparency = 1 })
+            local tw = self:Animate(LoadingOverlay, self.Tokens.Anim.Normal, { BackgroundTransparency = 1 })
             for _, desc in ipairs(LoadingOverlay:GetDescendants()) do
                 if desc:IsA("TextLabel") or desc:IsA("TextButton") then
-                    self:Animate(desc, self.Tokens.Animation.Fast, { TextTransparency = 1, BackgroundTransparency = 1 })
+                    self:Animate(desc, self.Tokens.Anim.Fast, { TextTransparency = 1, BackgroundTransparency = 1 })
                 elseif desc:IsA("Frame") then
-                    self:Animate(desc, self.Tokens.Animation.Fast, { BackgroundTransparency = 1 })
+                    self:Animate(desc, self.Tokens.Anim.Fast, { BackgroundTransparency = 1 })
                 end
             end
             if tw then
@@ -1385,27 +1497,26 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                     local taskFn = type(taskEntry) == "table" and taskEntry.Task or taskEntry
 
                     LoadStatus.Text = string.format("%s (%d/%d)", taskName, idx, total)
-                    local ok, err = safeCall("InitTask:" .. taskName, taskFn)
+                    local ok = safeCall("InitTask:" .. taskName, taskFn)
                     if not ok then
-                        LoadStatus.Text = "Erro em '" .. taskName .. "'. Clique para continuar."
+                        LoadStatus.Text = "Falha em '" .. taskName .. "'. Clique para continuar."
                         LoadStatus.TextColor3 = self.Theme.Error
                         SkipBtn.Text = "Continuar"
                         SkipBtn.Visible = true
                         return
                     end
                     local ratio = math.clamp(idx / total, 0, 1)
-                    self:Animate(BarFill, self.Tokens.Animation.Fast, { Size = UDim2.new(ratio, 0, 1, 0) })
+                    self:Animate(BarFill, self.Tokens.Anim.Fast, { Size = UDim2.fromScale(ratio, 1) })
                 end
                 closeLoadingOverlay()
             elseif type(initTasks) == "function" then
-                -- Indicador indeterminado real (sem fingir porcentagem)
-                BarFill.Size = UDim2.new(0.35, 0, 1, 0)
+                BarFill.Size = UDim2.fromScale(0.35, 1)
                 local pulseRunning = true
                 task.spawn(function()
                     while pulseRunning and not overlayClosed and not Window._destroyed do
-                        local t1 = self:Animate(BarFill, 0.55, { Position = UDim2.new(0.65, 0, 0, 0) })
+                        local t1 = self:Animate(BarFill, 0.5, { Position = UDim2.fromScale(0.65, 0) })
                         if t1 then t1.Completed:Wait() else task.wait(0.2) end
-                        local t2 = self:Animate(BarFill, 0.55, { Position = UDim2.new(0, 0, 0, 0) })
+                        local t2 = self:Animate(BarFill, 0.5, { Position = UDim2.fromScale(0, 0) })
                         if t2 then t2.Completed:Wait() else task.wait(0.2) end
                     end
                 end)
@@ -1417,7 +1528,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 end)
                 pulseRunning = false
                 if not ok then
-                    LoadStatus.Text = "Falha na inicialização. Clique para abrir a interface."
+                    LoadStatus.Text = "Erro na inicialização. Clique para abrir."
                     LoadStatus.TextColor3 = self.Theme.Error
                     SkipBtn.Text = "Abrir UI"
                     SkipBtn.Visible = true
@@ -1429,28 +1540,29 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
         winScope:Add(loadThread)
     end
 
-    -- Entrada inicial da janela
-    self._transitionId = 1
+    -- Entrada Inicial da Janela
+    Window._transitionId = 1
     Main.Visible = true
     self:_syncBlur()
     if self.ReducedMotion then
         Main.GroupTransparency = 0
         WinScale.Scale = uiScaleValue
     else
-        self:Animate(Main, self.Tokens.Animation.Normal, { GroupTransparency = 0 })
-        self:Animate(WinScale, self.Tokens.Animation.Normal, { Scale = uiScaleValue })
+        self:Animate(Main, self.Tokens.Anim.Normal, { GroupTransparency = 0 })
+        self:Animate(WinScale, self.Tokens.Anim.Normal, { Scale = uiScaleValue })
     end
 
     -- ========================================================================
-    -- 7. CRIAÇÃO DE ABAS, SEÇÕES E CONTROLES
+    -- 7. CRIAÇÃO DE ABAS, CÁLCULO EXATO DE COLUNAS E CONTROLES
     -- ========================================================================
-    function Window:AddTab(tabName: string)
-        tabName = tostring(tabName or "Tab")
+    function Window:AddTab(tabName: string, forceSingleColumn: boolean?)
+        tabName = tostring(tabName or "Aba")
         local tabScope = winScope:NewChild()
 
         local Tab = {
             Name = tabName,
             Active = false,
+            ForceSingleColumn = (forceSingleColumn == true),
             Sections = {},
             _scope = tabScope
         }
@@ -1464,12 +1576,12 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
             Text = "",
             Parent = TabList
         }, {
-            create("UICorner", { CornerRadius = Royalty.Tokens.CornerRadius.Control })
+            create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Control })
         })
         Royalty:BindThemeProperty(tabScope, TabBtn, "BackgroundColor3", "Surface")
 
         local ActiveBar = create("Frame", {
-            Size = UDim2.new(0, 3, 0, 0),
+            Size = UDim2.fromOffset(3, 0),
             Position = UDim2.new(0, 0, 0.5, 0),
             AnchorPoint = Vector2.new(0, 0.5),
             BackgroundColor3 = Royalty.Theme.Accent,
@@ -1477,13 +1589,13 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
             BorderSizePixel = 0,
             Parent = TabBtn
         }, {
-            create("UICorner", { CornerRadius = Royalty.Tokens.CornerRadius.Pill })
+            create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Pill })
         })
         Royalty:BindThemeProperty(tabScope, ActiveBar, "BackgroundColor3", "Accent")
 
         local TabTitle = create("TextLabel", {
             Size = UDim2.new(1, -24, 1, 0),
-            Position = UDim2.new(0, 14, 0, 0),
+            Position = UDim2.fromOffset(14, 0),
             BackgroundTransparency = 1,
             Text = tabName,
             TextColor3 = Royalty.Theme.SubText,
@@ -1496,21 +1608,22 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
         local PageScroll = create("ScrollingFrame", {
             Name = tabName .. "_Page",
-            Size = UDim2.new(1, 0, 1, 0),
+            Size = UDim2.fromScale(1, 1),
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
             Visible = false,
+            ScrollingDirection = Enum.ScrollingDirection.Y,
             ScrollBarThickness = 3,
             ScrollBarImageColor3 = Royalty.Theme.Border,
-            CanvasSize = UDim2.new(0, 0, 0, 0),
-            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            CanvasSize = UDim2.fromOffset(0, 0),
+            AutomaticCanvasSize = Enum.AutomaticSize.None,
             Parent = PagesHolder
         }, {
             create("UIPadding", {
-                PaddingTop = UDim.new(0, 12),
-                PaddingBottom = UDim.new(0, 16),
-                PaddingLeft = UDim.new(0, 14),
-                PaddingRight = UDim.new(0, 14)
+                PaddingTop = UDim.new(0, 14),
+                PaddingBottom = UDim.new(0, 18),
+                PaddingLeft = UDim.new(0, 16),
+                PaddingRight = UDim.new(0, 20)
             })
         })
         Royalty:BindThemeProperty(tabScope, PageScroll, "ScrollBarImageColor3", "Border")
@@ -1518,41 +1631,41 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
         local ColumnsContainer = create("Frame", {
             Name = "ColumnsContainer",
             Size = UDim2.new(1, 0, 0, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
             BackgroundTransparency = 1,
             Parent = PageScroll
         })
 
         local LeftColumn = create("Frame", {
             Name = "LeftColumn",
-            Size = UDim2.new(0.5, -6, 0, 0),
-            Position = UDim2.new(0, 0, 0, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
+            Size = UDim2.new(1, 0, 0, 0),
+            Position = UDim2.fromOffset(0, 0),
             BackgroundTransparency = 1,
             Parent = ColumnsContainer
-        }, {
-            create("UIListLayout", {
-                SortOrder = Enum.SortOrder.LayoutOrder,
-                Padding = UDim.new(0, 10)
-            })
+        })
+        local LeftLayout = create("UIListLayout", {
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Padding = UDim.new(0, 12),
+            Parent = LeftColumn
         })
 
         local RightColumn = create("Frame", {
             Name = "RightColumn",
-            Size = UDim2.new(0.5, -6, 0, 0),
-            Position = UDim2.new(0.5, 6, 0, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
+            Size = UDim2.new(1, 0, 0, 0),
+            Position = UDim2.fromOffset(0, 0),
             BackgroundTransparency = 1,
             Parent = ColumnsContainer
-        }, {
-            create("UIListLayout", {
-                SortOrder = Enum.SortOrder.LayoutOrder,
-                Padding = UDim.new(0, 10)
-            })
+        })
+        local RightLayout = create("UIListLayout", {
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Padding = UDim.new(0, 12),
+            Parent = RightColumn
         })
 
-        -- Adaptação responsiva de colunas (1 coluna se tela estreita ou se só uma coluna tiver seções visíveis)
+        -- Cálculo determinístico de colunas e CanvasSize (nunca corta embaixo nem ultrapassa a direita)
         function Tab:_updateColumns()
+            local rawScrollW = PageScroll.AbsoluteSize.X
+            local innerW = math.max(220, rawScrollW - 36)
+
             local hasLeft, hasRight = false, false
             for _, sec in ipairs(self.Sections) do
                 if sec.Frame.Visible then
@@ -1564,39 +1677,48 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 end
             end
 
-            local pageWidth = PageScroll.AbsoluteSize.X
-            local stackSingleColumn = (pageWidth > 0 and pageWidth < 360) or (hasLeft and not hasRight) or (hasRight and not hasLeft)
+            local leftH = hasLeft and LeftLayout.AbsoluteContentSize.Y or 0
+            local rightH = hasRight and RightLayout.AbsoluteContentSize.Y or 0
 
-            if stackSingleColumn then
-                if hasLeft and not hasRight then
-                    LeftColumn.Visible = true
-                    RightColumn.Visible = false
-                    LeftColumn.Size = UDim2.new(1, 0, 0, 0)
-                    LeftColumn.Position = UDim2.new(0, 0, 0, 0)
-                elseif hasRight and not hasLeft then
-                    LeftColumn.Visible = false
-                    RightColumn.Visible = true
-                    RightColumn.Size = UDim2.new(1, 0, 0, 0)
-                    RightColumn.Position = UDim2.new(0, 0, 0, 0)
-                else
-                    LeftColumn.Visible = true
-                    RightColumn.Visible = true
-                    LeftColumn.Size = UDim2.new(1, 0, 0, 0)
-                    LeftColumn.Position = UDim2.new(0, 0, 0, 0)
-                    RightColumn.Size = UDim2.new(1, 0, 0, 0)
-                    RightColumn.Position = UDim2.new(0, 0, 0, LeftColumn.AbsoluteSize.Y + 10)
-                end
-            else
+            -- Usa duas colunas somente se a aba não for forçada a 1 coluna, tiver os dois lados e houver espaço amplo (>= 520px internos)
+            local useTwoColumns = (not self.ForceSingleColumn) and hasLeft and hasRight and (innerW >= 520)
+
+            if useTwoColumns then
+                local gap = 12
+                local colW = math.floor((innerW - gap) * 0.5)
                 LeftColumn.Visible = true
                 RightColumn.Visible = true
-                LeftColumn.Size = UDim2.new(0.5, -6, 0, 0)
-                LeftColumn.Position = UDim2.new(0, 0, 0, 0)
-                RightColumn.Size = UDim2.new(0.5, -6, 0, 0)
-                RightColumn.Position = UDim2.new(0.5, 6, 0, 0)
+                LeftColumn.Size = UDim2.fromOffset(colW, leftH)
+                LeftColumn.Position = UDim2.fromOffset(0, 0)
+                RightColumn.Size = UDim2.fromOffset(colW, rightH)
+                RightColumn.Position = UDim2.fromOffset(colW + gap, 0)
+
+                local totalH = math.max(leftH, rightH)
+                ColumnsContainer.Size = UDim2.fromOffset(innerW, totalH)
+                PageScroll.CanvasSize = UDim2.fromOffset(0, totalH + 36)
+            else
+                LeftColumn.Visible = hasLeft
+                RightColumn.Visible = hasRight
+                LeftColumn.Size = UDim2.fromOffset(innerW, leftH)
+                LeftColumn.Position = UDim2.fromOffset(0, 0)
+
+                local rightY = (hasLeft and leftH > 0) and (leftH + 12) or 0
+                RightColumn.Size = UDim2.fromOffset(innerW, rightH)
+                RightColumn.Position = UDim2.fromOffset(0, rightY)
+
+                local totalH = leftH + rightH + ((hasLeft and hasRight and leftH > 0 and rightH > 0) and 12 or 0)
+                ColumnsContainer.Size = UDim2.fromOffset(innerW, totalH)
+                PageScroll.CanvasSize = UDim2.fromOffset(0, totalH + 36)
             end
         end
 
         tabScope:Connect(PageScroll:GetPropertyChangedSignal("AbsoluteSize"), function()
+            Tab:_updateColumns()
+        end)
+        tabScope:Connect(LeftLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+            Tab:_updateColumns()
+        end)
+        tabScope:Connect(RightLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
             Tab:_updateColumns()
         end)
 
@@ -1611,10 +1733,10 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 other.Active = false
                 other.Page.Visible = false
                 other.Title.Font = Royalty.Tokens.Font.Medium
-                Royalty:Animate(other.Btn, Royalty.Tokens.Animation.Fast, { BackgroundTransparency = 1 })
-                Royalty:Animate(other.Title, Royalty.Tokens.Animation.Fast, { TextColor3 = Royalty.Theme.SubText })
-                Royalty:Animate(other.ActiveBar, Royalty.Tokens.Animation.Fast, {
-                    Size = UDim2.new(0, 3, 0, 0),
+                Royalty:Animate(other.Btn, Royalty.Tokens.Anim.Fast, { BackgroundTransparency = 1 })
+                Royalty:Animate(other.Title, Royalty.Tokens.Anim.Fast, { TextColor3 = Royalty.Theme.SubText })
+                Royalty:Animate(other.ActiveBar, Royalty.Tokens.Anim.Fast, {
+                    Size = UDim2.fromOffset(3, 0),
                     BackgroundTransparency = 1
                 })
             end
@@ -1624,35 +1746,35 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
             ActivePageTitle.Text = self.Name
 
             TabTitle.Font = Royalty.Tokens.Font.Semibold
-            Royalty:Animate(TabBtn, Royalty.Tokens.Animation.Fast, { BackgroundTransparency = 0 })
-            Royalty:Animate(TabTitle, Royalty.Tokens.Animation.Fast, { TextColor3 = Royalty.Theme.Text })
-            Royalty:Animate(ActiveBar, Royalty.Tokens.Animation.Normal, {
-                Size = UDim2.new(0, 3, 0, 18),
+            Royalty:Animate(TabBtn, Royalty.Tokens.Anim.Fast, { BackgroundTransparency = 0 })
+            Royalty:Animate(TabTitle, Royalty.Tokens.Anim.Fast, { TextColor3 = Royalty.Theme.Text })
+            Royalty:Animate(ActiveBar, Royalty.Tokens.Anim.Normal, {
+                Size = UDim2.fromOffset(3, 18),
                 BackgroundTransparency = 0
             })
 
             PageScroll.Visible = true
-            self:_updateColumns()
             applySearchFilter()
+            self:_updateColumns()
 
             if not Royalty.ReducedMotion then
-                ColumnsContainer.Position = UDim2.new(0, 0, 0, 6)
-                Royalty:Animate(ColumnsContainer, Royalty.Tokens.Animation.Fast, {
-                    Position = UDim2.new(0, 0, 0, 0)
+                ColumnsContainer.Position = UDim2.fromOffset(0, 6)
+                Royalty:Animate(ColumnsContainer, Royalty.Tokens.Anim.Fast, {
+                    Position = UDim2.fromOffset(0, 0)
                 })
             else
-                ColumnsContainer.Position = UDim2.new(0, 0, 0, 0)
+                ColumnsContainer.Position = UDim2.fromOffset(0, 0)
             end
         end
 
         tabScope:Connect(TabBtn.MouseEnter, function()
             if not Tab.Active then
-                Royalty:Animate(TabBtn, Royalty.Tokens.Animation.Fast, { BackgroundTransparency = 0.5 })
+                Royalty:Animate(TabBtn, Royalty.Tokens.Anim.Fast, { BackgroundTransparency = 0.5 })
             end
         end)
         tabScope:Connect(TabBtn.MouseLeave, function()
             if not Tab.Active then
-                Royalty:Animate(TabBtn, Royalty.Tokens.Animation.Fast, { BackgroundTransparency = 1 })
+                Royalty:Animate(TabBtn, Royalty.Tokens.Anim.Fast, { BackgroundTransparency = 1 })
             end
         end)
         tabScope:Connect(TabBtn.Activated, function()
@@ -1673,7 +1795,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
         -- SEÇÕES E CONTROLES
         -- ====================================================================
         function Tab:AddSection(sectionName: string, side: string?)
-            sectionName = tostring(sectionName or "Section")
+            sectionName = tostring(sectionName or "Seção")
             local normalizedSide = (side and string.lower(tostring(side)) == "right") and "right" or "left"
             local parentColumn = (normalizedSide == "right") and RightColumn or LeftColumn
             local secScope = tabScope:NewChild()
@@ -1687,24 +1809,26 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
             local SecFrame = create("Frame", {
                 Name = sectionName .. "_Section",
-                Size = UDim2.new(1, 0, 0, 0),
-                AutomaticSize = Enum.AutomaticSize.Y,
+                Size = UDim2.new(1, 0, 0, 44),
                 BackgroundColor3 = Royalty.Theme.Surface,
+                ClipsDescendants = true,
                 Parent = parentColumn
             }, {
-                create("UICorner", { CornerRadius = Royalty.Tokens.CornerRadius.Section }),
+                create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Section }),
                 create("UIPadding", {
-                    PaddingTop = UDim.new(0, 10),
+                    PaddingTop = UDim.new(0, 12),
                     PaddingBottom = UDim.new(0, 12),
-                    PaddingLeft = UDim.new(0, 12),
-                    PaddingRight = UDim.new(0, 12)
-                }),
-                create("UIListLayout", {
-                    SortOrder = Enum.SortOrder.LayoutOrder,
-                    Padding = UDim.new(0, 8)
+                    PaddingLeft = UDim.new(0, 14),
+                    PaddingRight = UDim.new(0, 14)
                 })
             })
             Royalty:BindThemeProperty(secScope, SecFrame, "BackgroundColor3", "Surface")
+
+            local SecLayout = create("UIListLayout", {
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                Padding = UDim.new(0, 10),
+                Parent = SecFrame
+            })
 
             local SecStroke = create("UIStroke", {
                 Color = Royalty.Theme.BorderSubtle,
@@ -1715,7 +1839,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
             local HeaderHolder = create("Frame", {
                 LayoutOrder = 0,
-                Size = UDim2.new(1, 0, 0, 20),
+                Size = UDim2.new(1, 0, 0, 22),
                 BackgroundTransparency = 1,
                 Parent = SecFrame
             })
@@ -1741,9 +1865,20 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
             })
             Royalty:BindThemeProperty(secScope, HeaderLine, "BackgroundColor3", "BorderSubtle")
 
+            function Section:_updateHeight()
+                if not SecFrame or not SecFrame.Parent then return end
+                local contentH = SecLayout.AbsoluteContentSize.Y
+                SecFrame.Size = UDim2.new(1, 0, 0, contentH + 24)
+                Tab:_updateColumns()
+            end
+
+            secScope:Connect(SecLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+                Section:_updateHeight()
+            end)
+
             Section.Frame = SecFrame
             table.insert(Tab.Sections, Section)
-            Tab:_updateColumns()
+            Section:_updateHeight()
 
             local itemOrder = 0
             local function registerSectionItem(inst: Instance, searchLabel: string)
@@ -1753,6 +1888,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                     Instance = inst,
                     SearchText = searchLabel
                 })
+                Section:_updateHeight()
             end
 
             -- ----------------------------------------------------------------
@@ -1764,7 +1900,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 local descText = type(textOrCfg) == "table" and textOrCfg.Description and tostring(textOrCfg.Description) or nil
 
                 local Holder = create("Frame", {
-                    Size = UDim2.new(1, 0, 0, 0),
+                    Size = UDim2.new(1, 0, 0, 20),
                     AutomaticSize = Enum.AutomaticSize.Y,
                     BackgroundTransparency = 1,
                     Parent = SecFrame
@@ -1774,16 +1910,15 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                         Padding = UDim.new(0, 2)
                     })
                 })
-                registerSectionItem(Holder, mainText .. " " .. (descText or ""))
 
                 local Lbl = create("TextLabel", {
                     LayoutOrder = 1,
-                    Size = UDim2.new(1, 0, 0, 0),
+                    Size = UDim2.new(1, 0, 0, 18),
                     AutomaticSize = Enum.AutomaticSize.Y,
                     BackgroundTransparency = 1,
                     Text = mainText,
                     TextColor3 = Royalty.Theme.SubText,
-                    Font = Royalty.Tokens.Font.Regular,
+                    Font = Royalty.Tokens.Font.Medium,
                     TextSize = Royalty.Tokens.TextSize.Description,
                     TextWrapped = true,
                     TextXAlignment = Enum.TextXAlignment.Left,
@@ -1791,11 +1926,10 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 })
                 Royalty:BindThemeProperty(ctrlScope, Lbl, "TextColor3", "SubText")
 
-                local DescLbl = nil
                 if descText and descText ~= "" then
-                    DescLbl = create("TextLabel", {
+                    local DescLbl = create("TextLabel", {
                         LayoutOrder = 2,
-                        Size = UDim2.new(1, 0, 0, 0),
+                        Size = UDim2.new(1, 0, 0, 16),
                         AutomaticSize = Enum.AutomaticSize.Y,
                         BackgroundTransparency = 1,
                         Text = descText,
@@ -1809,10 +1943,13 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                     Royalty:BindThemeProperty(ctrlScope, DescLbl, "TextColor3", "Muted")
                 end
 
+                registerSectionItem(Holder, mainText .. " " .. (descText or ""))
+
                 local LabelObj = {}
                 function LabelObj:Set(newText: string)
                     mainText = tostring(newText or "")
                     Lbl.Text = mainText
+                    Section:_updateHeight()
                 end
                 function LabelObj:Get(): string
                     return mainText
@@ -1842,29 +1979,27 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
             function Section:AddButton(bCfg: { Name: string?, Description: string?, Disabled: boolean?, Callback: (() -> ())? }?)
                 bCfg = bCfg or {}
                 local ctrlScope = secScope:NewChild()
-                local bName = tostring(bCfg.Name or "Button")
+                local bName = tostring(bCfg.Name or "Botão")
                 local bDesc = bCfg.Description and tostring(bCfg.Description) or nil
                 local disabled = (bCfg.Disabled == true)
                 local loading = false
                 local callback = bCfg.Callback
 
+                local hasDesc = (bDesc ~= nil and bDesc ~= "")
+
                 local BtnFrame = create("TextButton", {
-                    Size = UDim2.new(1, 0, 0, 0),
-                    AutomaticSize = Enum.AutomaticSize.Y,
+                    Size = UDim2.new(1, 0, 0, hasDesc and 48 or 34),
                     BackgroundColor3 = Royalty.Theme.SurfaceElevated,
                     AutoButtonColor = false,
                     Text = "",
                     Parent = SecFrame
                 }, {
-                    create("UICorner", { CornerRadius = Royalty.Tokens.CornerRadius.Control }),
+                    create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Control }),
                     create("UIPadding", {
-                        PaddingTop = UDim.new(0, 8),
-                        PaddingBottom = UDim.new(0, 8),
-                        PaddingLeft = UDim.new(0, 10),
-                        PaddingRight = UDim.new(0, 10)
+                        PaddingLeft = UDim.new(0, 12),
+                        PaddingRight = UDim.new(0, 12)
                     })
                 })
-                registerSectionItem(BtnFrame, bName .. " " .. (bDesc or ""))
 
                 local BtnStroke = create("UIStroke", {
                     Color = Royalty.Theme.Border,
@@ -1873,73 +2008,59 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 })
                 Royalty:BindThemeProperty(ctrlScope, BtnStroke, "Color", "Border")
 
-                local TextStack = create("Frame", {
-                    Size = UDim2.new(1, -24, 0, 0),
-                    AutomaticSize = Enum.AutomaticSize.Y,
-                    BackgroundTransparency = 1,
-                    Parent = BtnFrame
-                }, {
-                    create("UIListLayout", {
-                        SortOrder = Enum.SortOrder.LayoutOrder,
-                        Padding = UDim.new(0, 2)
-                    })
-                })
-
                 local TitleLbl = create("TextLabel", {
-                    LayoutOrder = 1,
-                    Size = UDim2.new(1, 0, 0, 16),
+                    Size = UDim2.new(1, -24, 0, 18),
+                    Position = hasDesc and UDim2.fromOffset(0, 7) or UDim2.new(0, 0, 0.5, -9),
                     BackgroundTransparency = 1,
                     Text = bName,
                     TextColor3 = disabled and Royalty.Theme.Muted or Royalty.Theme.Text,
                     Font = Royalty.Tokens.Font.Medium,
                     TextSize = Royalty.Tokens.TextSize.Control,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
                     TextXAlignment = Enum.TextXAlignment.Left,
-                    Parent = TextStack
+                    Parent = BtnFrame
                 })
 
-                if bDesc and bDesc ~= "" then
+                if hasDesc then
                     local DescLbl = create("TextLabel", {
-                        LayoutOrder = 2,
-                        Size = UDim2.new(1, 0, 0, 0),
-                        AutomaticSize = Enum.AutomaticSize.Y,
+                        Size = UDim2.new(1, -24, 0, 15),
+                        Position = UDim2.fromOffset(0, 25),
                         BackgroundTransparency = 1,
-                        Text = bDesc,
+                        Text = bDesc :: string,
                         TextColor3 = Royalty.Theme.Muted,
                         Font = Royalty.Tokens.Font.Regular,
                         TextSize = Royalty.Tokens.TextSize.Small,
-                        TextWrapped = true,
+                        TextTruncate = Enum.TextTruncate.AtEnd,
                         TextXAlignment = Enum.TextXAlignment.Left,
-                        Parent = TextStack
+                        Parent = BtnFrame
                     })
                     Royalty:BindThemeProperty(ctrlScope, DescLbl, "TextColor3", "Muted")
                 end
 
-                local ActionBadge = create("TextLabel", {
-                    Size = UDim2.new(0, 20, 0, 16),
-                    Position = UDim2.new(1, -20, 0.5, -8),
-                    BackgroundTransparency = 1,
-                    Text = "→",
-                    TextColor3 = Royalty.Theme.SubText,
-                    Font = Royalty.Tokens.Font.Bold,
-                    TextSize = 13,
-                    TextXAlignment = Enum.TextXAlignment.Right,
+                -- Indicador geométrico discreto à direita (sem caracteres Unicode quebrados)
+                local RightDot = create("Frame", {
+                    Size = UDim2.fromOffset(6, 6),
+                    Position = UDim2.new(1, -6, 0.5, -3),
+                    BackgroundColor3 = Royalty.Theme.SubText,
+                    BorderSizePixel = 0,
                     Parent = BtnFrame
+                }, {
+                    create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Pill })
                 })
+
+                registerSectionItem(BtnFrame, bName .. " " .. (bDesc or ""))
 
                 local hovered = false
                 local function refreshVisual()
                     local targetBg = (hovered and not disabled and not loading) and Royalty.Theme.SurfaceHover or Royalty.Theme.SurfaceElevated
                     local targetText = (disabled or loading) and Royalty.Theme.Muted or Royalty.Theme.Text
-                    local targetBadge = loading and Royalty.Theme.Accent or (hovered and not disabled and Royalty.Theme.Text or Royalty.Theme.SubText)
-                    ActionBadge.Text = loading and "..." or "→"
-                    Royalty:Animate(BtnFrame, Royalty.Tokens.Animation.Fast, { BackgroundColor3 = targetBg })
-                    Royalty:Animate(TitleLbl, Royalty.Tokens.Animation.Fast, { TextColor3 = targetText })
-                    Royalty:Animate(ActionBadge, Royalty.Tokens.Animation.Fast, { TextColor3 = targetBadge })
+                    local targetDot = loading and Royalty.Theme.Accent or (hovered and not disabled and Royalty.Theme.Accent or Royalty.Theme.Muted)
+                    Royalty:Animate(BtnFrame, Royalty.Tokens.Anim.Fast, { BackgroundColor3 = targetBg })
+                    Royalty:Animate(TitleLbl, Royalty.Tokens.Anim.Fast, { TextColor3 = targetText })
+                    Royalty:Animate(RightDot, Royalty.Tokens.Anim.Fast, { BackgroundColor3 = targetDot })
                 end
 
-                Royalty:OnThemeChanged(ctrlScope, function()
-                    refreshVisual()
-                end)
+                Royalty:OnThemeChanged(ctrlScope, refreshVisual)
 
                 ctrlScope:Connect(BtnFrame.MouseEnter, function()
                     hovered = true
@@ -1955,7 +2076,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                     Royalty:Animate(BtnStroke, 0.08, { Color = Royalty.Theme.Accent })
                     task.delay(0.14, function()
                         if BtnStroke and BtnStroke.Parent then
-                            Royalty:Animate(BtnStroke, Royalty.Tokens.Animation.Fast, { Color = Royalty.Theme.Border })
+                            Royalty:Animate(BtnStroke, Royalty.Tokens.Anim.Fast, { Color = Royalty.Theme.Border })
                         end
                     end)
                     task.spawn(function()
@@ -1985,7 +2106,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
             function Section:AddToggle(tCfg: { Name: string?, Description: string?, Default: boolean?, Disabled: boolean?, Flag: string?, CallOnInit: boolean?, Callback: ((state: boolean) -> ())? }?)
                 tCfg = tCfg or {}
                 local ctrlScope = secScope:NewChild()
-                local tName = tostring(tCfg.Name or "Toggle")
+                local tName = tostring(tCfg.Name or "Alternar")
                 local tDesc = tCfg.Description and tostring(tCfg.Description) or nil
                 local state = (tCfg.Default == true)
                 local disabled = (tCfg.Disabled == true)
@@ -1993,75 +2114,57 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 local callOnInit = (tCfg.CallOnInit ~= false)
                 local callback = tCfg.Callback
 
+                local hasDesc = (tDesc ~= nil and tDesc ~= "")
+
                 Royalty.Flags[flag] = state
                 local ToggleObj = { Value = state, Disabled = disabled }
                 Window._controlsByFlag[flag] = ToggleObj
 
                 local RowBtn = create("TextButton", {
-                    Size = UDim2.new(1, 0, 0, 0),
-                    AutomaticSize = Enum.AutomaticSize.Y,
+                    Size = UDim2.new(1, 0, 0, hasDesc and 42 or 26),
                     BackgroundTransparency = 1,
                     AutoButtonColor = false,
                     Text = "",
                     Parent = SecFrame
-                }, {
-                    create("UIPadding", {
-                        PaddingTop = UDim.new(0, 2),
-                        PaddingBottom = UDim.new(0, 2)
-                    })
-                })
-                registerSectionItem(RowBtn, tName .. " " .. (tDesc or ""))
-
-                local TextStack = create("Frame", {
-                    Size = UDim2.new(1, -56, 0, 0),
-                    AutomaticSize = Enum.AutomaticSize.Y,
-                    BackgroundTransparency = 1,
-                    Parent = RowBtn
-                }, {
-                    create("UIListLayout", {
-                        SortOrder = Enum.SortOrder.LayoutOrder,
-                        Padding = UDim.new(0, 2)
-                    })
                 })
 
                 local TitleLbl = create("TextLabel", {
-                    LayoutOrder = 1,
-                    Size = UDim2.new(1, 0, 0, 18),
+                    Size = UDim2.new(1, -54, 0, 18),
+                    Position = hasDesc and UDim2.fromOffset(0, 2) or UDim2.new(0, 0, 0.5, -9),
                     BackgroundTransparency = 1,
                     Text = tName,
                     TextColor3 = Royalty.Theme.Text,
                     Font = Royalty.Tokens.Font.Medium,
                     TextSize = Royalty.Tokens.TextSize.Control,
-                    TextWrapped = true,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
                     TextXAlignment = Enum.TextXAlignment.Left,
-                    Parent = TextStack
+                    Parent = RowBtn
                 })
 
-                if tDesc and tDesc ~= "" then
+                if hasDesc then
                     local DescLbl = create("TextLabel", {
-                        LayoutOrder = 2,
-                        Size = UDim2.new(1, 0, 0, 0),
-                        AutomaticSize = Enum.AutomaticSize.Y,
+                        Size = UDim2.new(1, -54, 0, 16),
+                        Position = UDim2.fromOffset(0, 22),
                         BackgroundTransparency = 1,
-                        Text = tDesc,
+                        Text = tDesc :: string,
                         TextColor3 = Royalty.Theme.Muted,
                         Font = Royalty.Tokens.Font.Regular,
                         TextSize = Royalty.Tokens.TextSize.Small,
-                        TextWrapped = true,
+                        TextTruncate = Enum.TextTruncate.AtEnd,
                         TextXAlignment = Enum.TextXAlignment.Left,
-                        Parent = TextStack
+                        Parent = RowBtn
                     })
                     Royalty:BindThemeProperty(ctrlScope, DescLbl, "TextColor3", "Muted")
                 end
 
                 local Track = create("Frame", {
-                    Size = UDim2.new(0, 44, 0, 22),
-                    Position = UDim2.new(1, -44, 0, 0),
+                    Size = UDim2.fromOffset(40, 20),
+                    Position = UDim2.new(1, -40, 0.5, -10),
                     BackgroundColor3 = state and Royalty.Theme.Accent or Royalty.Theme.SurfaceElevated,
                     BorderSizePixel = 0,
                     Parent = RowBtn
                 }, {
-                    create("UICorner", { CornerRadius = Royalty.Tokens.CornerRadius.Pill })
+                    create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Pill })
                 })
 
                 local TrackStroke = create("UIStroke", {
@@ -2070,46 +2173,34 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                     Parent = Track
                 })
 
-                -- Sinal visual textual ("ON" / "OFF") para não depender apenas da cor
-                local StateLabel = create("TextLabel", {
-                    Size = UDim2.new(0, 20, 1, 0),
-                    Position = state and UDim2.new(0, 5, 0, 0) or UDim2.new(1, -24, 0, 0),
-                    BackgroundTransparency = 1,
-                    Text = state and "ON" or "OFF",
-                    TextColor3 = state and Color3.fromRGB(255, 255, 255) or Royalty.Theme.Muted,
-                    Font = Royalty.Tokens.Font.Bold,
-                    TextSize = 8,
-                    Parent = Track
-                })
-
                 local Knob = create("Frame", {
-                    Size = UDim2.new(0, 16, 0, 16),
-                    Position = state and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8),
+                    Size = UDim2.fromOffset(14, 14),
+                    Position = state and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7),
                     BackgroundColor3 = Color3.fromRGB(255, 255, 255),
                     BorderSizePixel = 0,
                     Parent = Track
                 }, {
-                    create("UICorner", { CornerRadius = Royalty.Tokens.CornerRadius.Pill })
+                    create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Pill })
                 })
+
+                registerSectionItem(RowBtn, tName .. " " .. (tDesc or ""))
 
                 local function syncVisual()
                     local isOn = ToggleObj.Value
                     local isDis = ToggleObj.Disabled
-                    StateLabel.Text = isOn and "ON" or "OFF"
-                    StateLabel.Position = isOn and UDim2.new(0, 5, 0, 0) or UDim2.new(1, -24, 0, 0)
-                    StateLabel.TextColor3 = isOn and Color3.fromRGB(255, 255, 255) or Royalty.Theme.Muted
 
-                    Royalty:Animate(TitleLbl, Royalty.Tokens.Animation.Fast, {
+                    Royalty:Animate(TitleLbl, Royalty.Tokens.Anim.Fast, {
                         TextColor3 = isDis and Royalty.Theme.Muted or (isOn and Royalty.Theme.Text or Royalty.Theme.SubText)
                     })
-                    Royalty:Animate(Track, Royalty.Tokens.Animation.Fast, {
+                    Royalty:Animate(Track, Royalty.Tokens.Anim.Fast, {
                         BackgroundColor3 = isOn and Royalty.Theme.Accent or Royalty.Theme.SurfaceElevated
                     })
-                    Royalty:Animate(TrackStroke, Royalty.Tokens.Animation.Fast, {
+                    Royalty:Animate(TrackStroke, Royalty.Tokens.Anim.Fast, {
                         Color = isOn and Royalty.Theme.Accent or Royalty.Theme.Border
                     })
-                    Royalty:Animate(Knob, Royalty.Tokens.Animation.Fast, {
-                        Position = isOn and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
+                    Royalty:Animate(Knob, Royalty.Tokens.Anim.Fast, {
+                        Position = isOn and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7),
+                        BackgroundColor3 = isOn and Color3.fromRGB(255, 255, 255) or Royalty.Theme.SubText
                     })
                 end
 
@@ -2153,12 +2244,12 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
             end
 
             -- ----------------------------------------------------------------
-            -- 5. SLIDER
+            -- 5. SLIDER (COM RECUO DE TRILHO PARA NUNCA TRANSBORDAR À DIREITA)
             -- ----------------------------------------------------------------
             function Section:AddSlider(sCfg: { Name: string?, Description: string?, Min: number?, Max: number?, Default: number?, Rounding: number?, Suffix: string?, CallbackOnRelease: boolean?, Flag: string?, Callback: ((val: number) -> ())? }?)
                 sCfg = sCfg or {}
                 local ctrlScope = secScope:NewChild()
-                local sName = tostring(sCfg.Name or "Slider")
+                local sName = tostring(sCfg.Name or "Ajuste")
                 local sDesc = sCfg.Description and tostring(sCfg.Description) or nil
                 local minVal = tonumber(sCfg.Min) or 0
                 local maxVal = tonumber(sCfg.Max) or 100
@@ -2170,6 +2261,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 local callbackOnRelease = (sCfg.CallbackOnRelease == true)
                 local flag = tostring(sCfg.Flag or sName)
                 local callback = sCfg.Callback
+
+                local hasDesc = (sDesc ~= nil and sDesc ~= "")
 
                 local function roundValue(n: number): number
                     local clamped = math.clamp(n, minVal, maxVal)
@@ -2186,27 +2279,19 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 Window._controlsByFlag[flag] = SliderObj
 
                 local Container = create("Frame", {
-                    Size = UDim2.new(1, 0, 0, 0),
-                    AutomaticSize = Enum.AutomaticSize.Y,
+                    Size = UDim2.new(1, 0, 0, hasDesc and 56 or 38),
                     BackgroundTransparency = 1,
                     Parent = SecFrame
-                }, {
-                    create("UIListLayout", {
-                        SortOrder = Enum.SortOrder.LayoutOrder,
-                        Padding = UDim.new(0, 6)
-                    })
                 })
-                registerSectionItem(Container, sName .. " " .. (sDesc or ""))
 
                 local TopRow = create("Frame", {
-                    LayoutOrder = 1,
                     Size = UDim2.new(1, 0, 0, 18),
                     BackgroundTransparency = 1,
                     Parent = Container
                 })
 
                 local TitleLbl = create("TextLabel", {
-                    Size = UDim2.new(0.68, 0, 1, 0),
+                    Size = UDim2.new(1, -76, 1, 0),
                     BackgroundTransparency = 1,
                     Text = sName,
                     TextColor3 = Royalty.Theme.Text,
@@ -2219,8 +2304,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 Royalty:BindThemeProperty(ctrlScope, TitleLbl, "TextColor3", "Text")
 
                 local ValueLbl = create("TextLabel", {
-                    Size = UDim2.new(0.32, 0, 1, 0),
-                    Position = UDim2.new(0.68, 0, 0, 0),
+                    Size = UDim2.fromOffset(72, 18),
+                    Position = UDim2.new(1, -72, 0, 0),
                     BackgroundTransparency = 1,
                     Text = "",
                     TextColor3 = Royalty.Theme.Accent,
@@ -2231,17 +2316,16 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 })
                 Royalty:BindThemeProperty(ctrlScope, ValueLbl, "TextColor3", "Accent")
 
-                if sDesc and sDesc ~= "" then
+                if hasDesc then
                     local DescLbl = create("TextLabel", {
-                        LayoutOrder = 2,
-                        Size = UDim2.new(1, 0, 0, 0),
-                        AutomaticSize = Enum.AutomaticSize.Y,
+                        Size = UDim2.new(1, 0, 0, 15),
+                        Position = UDim2.fromOffset(0, 19),
                         BackgroundTransparency = 1,
-                        Text = sDesc,
+                        Text = sDesc :: string,
                         TextColor3 = Royalty.Theme.Muted,
                         Font = Royalty.Tokens.Font.Regular,
                         TextSize = Royalty.Tokens.TextSize.Small,
-                        TextWrapped = true,
+                        TextTruncate = Enum.TextTruncate.AtEnd,
                         TextXAlignment = Enum.TextXAlignment.Left,
                         Parent = Container
                     })
@@ -2249,21 +2333,22 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 end
 
                 local TrackHitbox = create("Frame", {
-                    LayoutOrder = 3,
                     Size = UDim2.new(1, 0, 0, 16),
+                    Position = UDim2.new(0, 0, 1, -16),
                     BackgroundTransparency = 1,
                     Active = true,
                     Parent = Container
                 })
 
+                -- Recuo de 6px em cada lado para que a bolinha (12px) nunca saia da seção
                 local Track = create("Frame", {
-                    Size = UDim2.new(1, 0, 0, 6),
-                    Position = UDim2.new(0, 0, 0.5, -3),
+                    Size = UDim2.new(1, -12, 0, 6),
+                    Position = UDim2.new(0, 6, 0.5, -3),
                     BackgroundColor3 = Royalty.Theme.SurfaceElevated,
                     BorderSizePixel = 0,
                     Parent = TrackHitbox
                 }, {
-                    create("UICorner", { CornerRadius = Royalty.Tokens.CornerRadius.Pill })
+                    create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Pill })
                 })
                 Royalty:BindThemeProperty(ctrlScope, Track, "BackgroundColor3", "SurfaceElevated")
 
@@ -2275,26 +2360,28 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 Royalty:BindThemeProperty(ctrlScope, TrackStroke, "Color", "Border")
 
                 local Fill = create("Frame", {
-                    Size = UDim2.new(0, 0, 1, 0),
+                    Size = UDim2.fromScale(0, 1),
                     BackgroundColor3 = Royalty.Theme.Accent,
                     BorderSizePixel = 0,
                     Parent = Track
                 }, {
-                    create("UICorner", { CornerRadius = Royalty.Tokens.CornerRadius.Pill })
+                    create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Pill })
                 })
                 Royalty:BindThemeProperty(ctrlScope, Fill, "BackgroundColor3", "Accent")
 
                 local Thumb = create("Frame", {
-                    Size = UDim2.new(0, 12, 0, 12),
+                    Size = UDim2.fromOffset(12, 12),
                     AnchorPoint = Vector2.new(0.5, 0.5),
-                    Position = UDim2.new(0, 0, 0.5, 0),
+                    Position = UDim2.fromScale(0, 0.5),
                     BackgroundColor3 = Color3.fromRGB(255, 255, 255),
                     BorderSizePixel = 0,
                     Parent = Track
                 }, {
-                    create("UICorner", { CornerRadius = Royalty.Tokens.CornerRadius.Pill }),
+                    create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Pill }),
                     create("UIStroke", { Color = Royalty.Theme.Background, Thickness = 1.5 })
                 })
+
+                registerSectionItem(Container, sName .. " " .. (sDesc or ""))
 
                 local function getAlpha(val: number): number
                     if maxVal <= minVal then
@@ -2313,8 +2400,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 local function updateVisualDirect(val: number)
                     local alpha = getAlpha(val)
                     ValueLbl.Text = formatVal(val)
-                    Fill.Size = UDim2.new(alpha, 0, 1, 0)
-                    Thumb.Position = UDim2.new(alpha, 0, 0.5, 0)
+                    Fill.Size = UDim2.fromScale(alpha, 1)
+                    Thumb.Position = UDim2.fromScale(alpha, 0.5)
                 end
 
                 function SliderObj:Set(newVal: number, silent: boolean?)
@@ -2381,12 +2468,12 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
             end
 
             -- ----------------------------------------------------------------
-            -- 6. DROPDOWN (SINGLE & MULTI + BUSCA INTERNA + REFRESH SEGURO)
+            -- 6. DROPDOWN (COM CHEVRON E CHECKBOX GEOMÉTRICOS PUROS)
             -- ----------------------------------------------------------------
             function Section:AddDropdown(dCfg: { Name: string?, Description: string?, Options: { string }?, Default: any, Multi: boolean?, Searchable: boolean?, Flag: string?, Callback: ((val: any) -> ())? }?)
                 dCfg = dCfg or {}
                 local ctrlScope = secScope:NewChild()
-                local dName = tostring(dCfg.Name or "Dropdown")
+                local dName = tostring(dCfg.Name or "Seletor")
                 local dDesc = dCfg.Description and tostring(dCfg.Description) or nil
                 local isMulti = (dCfg.Multi == true)
                 local flag = tostring(dCfg.Flag or dName)
@@ -2399,7 +2486,6 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                     end
                 end
 
-                -- Normaliza seleção única (string?) ou múltipla ({ [string]: boolean })
                 local function normalizeMultiTable(inputVal: any): { [string]: boolean }
                     local map: { [string]: boolean } = {}
                     if type(inputVal) == "table" then
@@ -2443,17 +2529,15 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 Window._controlsByFlag[flag] = DropObj
 
                 local Wrapper = create("Frame", {
-                    Size = UDim2.new(1, 0, 0, 0),
-                    AutomaticSize = Enum.AutomaticSize.Y,
+                    Size = UDim2.new(1, 0, 0, 52),
                     BackgroundTransparency = 1,
                     Parent = SecFrame
-                }, {
-                    create("UIListLayout", {
-                        SortOrder = Enum.SortOrder.LayoutOrder,
-                        Padding = UDim.new(0, 5)
-                    })
                 })
-                registerSectionItem(Wrapper, dName .. " " .. (dDesc or ""))
+                local WrapperLayout = create("UIListLayout", {
+                    SortOrder = Enum.SortOrder.LayoutOrder,
+                    Padding = UDim.new(0, 5),
+                    Parent = Wrapper
+                })
 
                 local TitleLbl = create("TextLabel", {
                     LayoutOrder = 1,
@@ -2463,6 +2547,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                     TextColor3 = Royalty.Theme.Text,
                     Font = Royalty.Tokens.Font.Medium,
                     TextSize = Royalty.Tokens.TextSize.Control,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Parent = Wrapper
                 })
@@ -2471,14 +2556,13 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 if dDesc and dDesc ~= "" then
                     local DescLbl = create("TextLabel", {
                         LayoutOrder = 2,
-                        Size = UDim2.new(1, 0, 0, 0),
-                        AutomaticSize = Enum.AutomaticSize.Y,
+                        Size = UDim2.new(1, 0, 0, 15),
                         BackgroundTransparency = 1,
                         Text = dDesc,
                         TextColor3 = Royalty.Theme.Muted,
                         Font = Royalty.Tokens.Font.Regular,
                         TextSize = Royalty.Tokens.TextSize.Small,
-                        TextWrapped = true,
+                        TextTruncate = Enum.TextTruncate.AtEnd,
                         TextXAlignment = Enum.TextXAlignment.Left,
                         Parent = Wrapper
                     })
@@ -2487,13 +2571,13 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
                 local HeaderBtn = create("TextButton", {
                     LayoutOrder = 3,
-                    Size = UDim2.new(1, 0, 0, 30),
+                    Size = UDim2.new(1, 0, 0, 32),
                     BackgroundColor3 = Royalty.Theme.SurfaceElevated,
                     AutoButtonColor = false,
                     Text = "",
                     Parent = Wrapper
                 }, {
-                    create("UICorner", { CornerRadius = Royalty.Tokens.CornerRadius.Control })
+                    create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Control })
                 })
                 Royalty:BindThemeProperty(ctrlScope, HeaderBtn, "BackgroundColor3", "SurfaceElevated")
 
@@ -2505,8 +2589,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 Royalty:BindThemeProperty(ctrlScope, HeaderStroke, "Color", "Border")
 
                 local SelectedLbl = create("TextLabel", {
-                    Size = UDim2.new(1, -34, 1, 0),
-                    Position = UDim2.new(0, 10, 0, 0),
+                    Size = UDim2.new(1, -36, 1, 0),
+                    Position = UDim2.fromOffset(10, 0),
                     BackgroundTransparency = 1,
                     Text = "",
                     TextColor3 = Royalty.Theme.Text,
@@ -2518,39 +2602,33 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 })
                 Royalty:BindThemeProperty(ctrlScope, SelectedLbl, "TextColor3", "Text")
 
-                local Chevron = create("TextLabel", {
-                    Size = UDim2.new(0, 20, 1, 0),
-                    Position = UDim2.new(1, -24, 0, 0),
-                    BackgroundTransparency = 1,
-                    Text = "▾",
-                    TextColor3 = Royalty.Theme.SubText,
-                    Font = Royalty.Tokens.Font.Bold,
-                    TextSize = 13,
-                    Parent = HeaderBtn
-                })
-                Royalty:BindThemeProperty(ctrlScope, Chevron, "TextColor3", "SubText")
+                local _, setChevronOpen, setChevronColor = createChevronIcon(HeaderBtn)
+                Royalty:OnThemeChanged(ctrlScope, function(theme)
+                    setChevronColor(theme.SubText)
+                end)
 
                 local DropdownPanel = create("Frame", {
                     LayoutOrder = 4,
-                    Size = UDim2.new(1, 0, 0, 0),
-                    AutomaticSize = Enum.AutomaticSize.Y,
+                    Size = UDim2.new(1, 0, 0, 120),
                     BackgroundColor3 = Royalty.Theme.Sidebar,
                     Visible = false,
                     Parent = Wrapper
                 }, {
-                    create("UICorner", { CornerRadius = Royalty.Tokens.CornerRadius.Control }),
+                    create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Control }),
                     create("UIPadding", {
                         PaddingTop = UDim.new(0, 6),
                         PaddingBottom = UDim.new(0, 6),
                         PaddingLeft = UDim.new(0, 6),
                         PaddingRight = UDim.new(0, 6)
-                    }),
-                    create("UIListLayout", {
-                        SortOrder = Enum.SortOrder.LayoutOrder,
-                        Padding = UDim.new(0, 4)
                     })
                 })
                 Royalty:BindThemeProperty(ctrlScope, DropdownPanel, "BackgroundColor3", "Sidebar")
+
+                local PanelLayout = create("UIListLayout", {
+                    SortOrder = Enum.SortOrder.LayoutOrder,
+                    Padding = UDim.new(0, 4),
+                    Parent = DropdownPanel
+                })
 
                 local PanelStroke = create("UIStroke", {
                     Color = Royalty.Theme.Border,
@@ -2561,7 +2639,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
                 local FilterBox = create("TextBox", {
                     LayoutOrder = 1,
-                    Size = UDim2.new(1, 0, 0, 24),
+                    Size = UDim2.new(1, 0, 0, 26),
                     BackgroundColor3 = Royalty.Theme.Surface,
                     Visible = (dCfg.Searchable == true) or (#cleanOptions >= 6),
                     Text = "",
@@ -2583,21 +2661,36 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
                 local OptionsScroll = create("ScrollingFrame", {
                     LayoutOrder = 2,
-                    Size = UDim2.new(1, 0, 0, 120),
+                    Size = UDim2.new(1, 0, 0, 100),
                     BackgroundTransparency = 1,
                     BorderSizePixel = 0,
+                    ScrollingDirection = Enum.ScrollingDirection.Y,
                     ScrollBarThickness = 2,
                     ScrollBarImageColor3 = Royalty.Theme.Accent,
-                    CanvasSize = UDim2.new(0, 0, 0, 0),
-                    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                    CanvasSize = UDim2.fromOffset(0, 0),
+                    AutomaticCanvasSize = Enum.AutomaticSize.None,
                     Parent = DropdownPanel
-                }, {
-                    create("UIListLayout", {
-                        SortOrder = Enum.SortOrder.LayoutOrder,
-                        Padding = UDim.new(0, 2)
-                    })
                 })
                 Royalty:BindThemeProperty(ctrlScope, OptionsScroll, "ScrollBarImageColor3", "Accent")
+
+                local OptionsListLayout = create("UIListLayout", {
+                    SortOrder = Enum.SortOrder.LayoutOrder,
+                    Padding = UDim.new(0, 2),
+                    Parent = OptionsScroll
+                })
+
+                local function syncWrapperHeight()
+                    DropdownPanel.Size = UDim2.new(1, 0, 0, PanelLayout.AbsoluteContentSize.Y + 12)
+                    Wrapper.Size = UDim2.new(1, 0, 0, WrapperLayout.AbsoluteContentSize.Y)
+                    Section:_updateHeight()
+                end
+
+                ctrlScope:Connect(WrapperLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+                    Wrapper.Size = UDim2.new(1, 0, 0, WrapperLayout.AbsoluteContentSize.Y)
+                    Section:_updateHeight()
+                end)
+
+                registerSectionItem(Wrapper, dName .. " " .. (dDesc or ""))
 
                 local optionsScope = ctrlScope:NewChild()
 
@@ -2613,7 +2706,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                                 table.insert(list, opt)
                             end
                         end
-                        SelectedLbl.Text = (#list > 0) and table.concat(list, ", ") or "Nenhum selecionado"
+                        SelectedLbl.Text = (#list > 0) and table.concat(list, ", ") or "Nenhum"
                     else
                         SelectedLbl.Text = DropObj.Value ~= nil and tostring(DropObj.Value) or "Selecionar..."
                     end
@@ -2637,7 +2730,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
                             local OptBtn = create("TextButton", {
                                 LayoutOrder = idx,
-                                Size = UDim2.new(1, 0, 0, 26),
+                                Size = UDim2.new(1, -4, 0, 28),
                                 BackgroundColor3 = isSelected and Royalty.Theme.SurfaceElevated or Royalty.Theme.Sidebar,
                                 BackgroundTransparency = isSelected and 0 or 1,
                                 AutoButtonColor = false,
@@ -2647,12 +2740,12 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                                 create("UICorner", { CornerRadius = UDim.new(0, 4) })
                             })
 
-                            local OptText = create("TextLabel", {
-                                Size = UDim2.new(1, -28, 1, 0),
-                                Position = UDim2.new(0, 8, 0, 0),
+                            create("TextLabel", {
+                                Size = UDim2.new(1, -30, 1, 0),
+                                Position = UDim2.fromOffset(8, 0),
                                 BackgroundTransparency = 1,
                                 Text = opt,
-                                TextColor3 = isSelected and Royalty.Theme.Accent or Royalty.Theme.SubText,
+                                TextColor3 = isSelected and Royalty.Theme.Text or Royalty.Theme.SubText,
                                 Font = isSelected and Royalty.Tokens.Font.Semibold or Royalty.Tokens.Font.Regular,
                                 TextSize = Royalty.Tokens.TextSize.Description,
                                 TextTruncate = Enum.TextTruncate.AtEnd,
@@ -2660,16 +2753,33 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                                 Parent = OptBtn
                             })
 
-                            local CheckLbl = create("TextLabel", {
-                                Size = UDim2.new(0, 18, 1, 0),
-                                Position = UDim2.new(1, -22, 0, 0),
-                                BackgroundTransparency = 1,
-                                Text = isSelected and "✓" or "",
-                                TextColor3 = Royalty.Theme.Accent,
-                                Font = Royalty.Tokens.Font.Bold,
-                                TextSize = 12,
+                            -- Indicador geométrico puro de item selecionado (sem glifos Unicode)
+                            local CheckBox = create("Frame", {
+                                Size = UDim2.fromOffset(12, 12),
+                                Position = UDim2.new(1, -18, 0.5, -6),
+                                BackgroundColor3 = isSelected and Royalty.Theme.Accent or Royalty.Theme.Surface,
+                                BorderSizePixel = 0,
                                 Parent = OptBtn
+                            }, {
+                                create("UICorner", { CornerRadius = isMulti and UDim.new(0, 3) or Royalty.Tokens.Corner.Pill }),
+                                create("UIStroke", {
+                                    Color = isSelected and Royalty.Theme.Accent or Royalty.Theme.Border,
+                                    Thickness = 1
+                                })
                             })
+
+                            if isSelected then
+                                create("Frame", {
+                                    Size = UDim2.fromOffset(6, 6),
+                                    Position = UDim2.fromScale(0.5, 0.5),
+                                    AnchorPoint = Vector2.new(0.5, 0.5),
+                                    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                                    BorderSizePixel = 0,
+                                    Parent = CheckBox
+                                }, {
+                                    create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Pill })
+                                })
+                            end
 
                             optionsScope:Connect(OptBtn.Activated, function()
                                 if isMulti then
@@ -2688,8 +2798,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                                     DropObj:Set(opt)
                                     DropObj.Open = false
                                     DropdownPanel.Visible = false
-                                    Chevron.Text = "▾"
-                                    Tab:_updateColumns()
+                                    setChevronOpen(false)
+                                    syncWrapperHeight()
                                 end
                             end)
                         end
@@ -2706,10 +2816,14 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                             Parent = OptionsScroll
                         })
                         OptionsScroll.Size = UDim2.new(1, 0, 0, 28)
+                        OptionsScroll.CanvasSize = UDim2.fromOffset(0, 28)
                     else
-                        local targetH = math.min(visibleCount * 28, 140)
+                        local contentH = visibleCount * 30
+                        local targetH = math.min(contentH, 136)
                         OptionsScroll.Size = UDim2.new(1, 0, 0, targetH)
+                        OptionsScroll.CanvasSize = UDim2.fromOffset(0, contentH)
                     end
+                    syncWrapperHeight()
                 end
 
                 ctrlScope:Connect(FilterBox:GetPropertyChangedSignal("Text"), rebuildOptionButtons)
@@ -2776,11 +2890,12 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 ctrlScope:Connect(HeaderBtn.Activated, function()
                     DropObj.Open = not DropObj.Open
                     DropdownPanel.Visible = DropObj.Open
-                    Chevron.Text = DropObj.Open and "▴" or "▾"
+                    setChevronOpen(DropObj.Open)
                     if DropObj.Open then
                         rebuildOptionButtons()
+                    else
+                        syncWrapperHeight()
                     end
-                    Tab:_updateColumns()
                 end)
 
                 updateHeaderText()
@@ -2789,18 +2904,20 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
             end
 
             -- ----------------------------------------------------------------
-            -- 7. KEYBIND (COM CANCELAMENTO SEGURO E RESPEITO A TEXTBOX)
+            -- 7. KEYBIND (VISUAL LIMPO E FOCO DE TEXTO RESPEITADO)
             -- ----------------------------------------------------------------
             function Section:AddKeybind(kCfg: { Name: string?, Description: string?, Default: any, Mode: string?, Flag: string?, Callback: ((active: boolean) -> ())?, ChangedCallback: ((newKey: any) -> ())? }?)
                 kCfg = kCfg or {}
                 local ctrlScope = secScope:NewChild()
-                local kName = tostring(kCfg.Name or "Keybind")
+                local kName = tostring(kCfg.Name or "Tecla de Atalho")
                 local kDesc = kCfg.Description and tostring(kCfg.Description) or nil
                 local currentKey = kCfg.Default
                 local currentMode = (kCfg.Mode and string.lower(tostring(kCfg.Mode)) == "hold") and "Hold" or "Toggle"
                 local flag = tostring(kCfg.Flag or kName)
                 local callback = kCfg.Callback
                 local changedCallback = kCfg.ChangedCallback
+
+                local hasDesc = (kDesc ~= nil and kDesc ~= "")
 
                 Royalty.Flags[flag] = currentKey
                 local KeyObj = {
@@ -2812,74 +2929,44 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 Window._controlsByFlag[flag] = KeyObj
 
                 local Row = create("Frame", {
-                    Size = UDim2.new(1, 0, 0, 0),
-                    AutomaticSize = Enum.AutomaticSize.Y,
+                    Size = UDim2.new(1, 0, 0, hasDesc and 42 or 26),
                     BackgroundTransparency = 1,
                     Parent = SecFrame
                 })
-                registerSectionItem(Row, kName .. " " .. (kDesc or ""))
-
-                local TextStack = create("Frame", {
-                    Size = UDim2.new(1, -110, 0, 0),
-                    AutomaticSize = Enum.AutomaticSize.Y,
-                    BackgroundTransparency = 1,
-                    Parent = Row
-                }, {
-                    create("UIListLayout", {
-                        SortOrder = Enum.SortOrder.LayoutOrder,
-                        Padding = UDim.new(0, 2)
-                    })
-                })
 
                 local TitleLbl = create("TextLabel", {
-                    LayoutOrder = 1,
-                    Size = UDim2.new(1, 0, 0, 18),
+                    Size = UDim2.new(1, -82, 0, 18),
+                    Position = hasDesc and UDim2.fromOffset(0, 2) or UDim2.new(0, 0, 0.5, -9),
                     BackgroundTransparency = 1,
                     Text = kName,
                     TextColor3 = Royalty.Theme.Text,
                     Font = Royalty.Tokens.Font.Medium,
                     TextSize = Royalty.Tokens.TextSize.Control,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
                     TextXAlignment = Enum.TextXAlignment.Left,
-                    Parent = TextStack
+                    Parent = Row
                 })
                 Royalty:BindThemeProperty(ctrlScope, TitleLbl, "TextColor3", "Text")
 
-                if kDesc and kDesc ~= "" then
+                if hasDesc then
                     local DescLbl = create("TextLabel", {
-                        LayoutOrder = 2,
-                        Size = UDim2.new(1, 0, 0, 0),
-                        AutomaticSize = Enum.AutomaticSize.Y,
+                        Size = UDim2.new(1, -82, 0, 15),
+                        Position = UDim2.fromOffset(0, 22),
                         BackgroundTransparency = 1,
-                        Text = kDesc,
+                        Text = kDesc :: string,
                         TextColor3 = Royalty.Theme.Muted,
                         Font = Royalty.Tokens.Font.Regular,
                         TextSize = Royalty.Tokens.TextSize.Small,
-                        TextWrapped = true,
+                        TextTruncate = Enum.TextTruncate.AtEnd,
                         TextXAlignment = Enum.TextXAlignment.Left,
-                        Parent = TextStack
+                        Parent = Row
                     })
                     Royalty:BindThemeProperty(ctrlScope, DescLbl, "TextColor3", "Muted")
                 end
 
-                local ModeBtn = create("TextButton", {
-                    Size = UDim2.new(0, 42, 0, 22),
-                    Position = UDim2.new(1, -106, 0, 0),
-                    BackgroundColor3 = Royalty.Theme.SurfaceElevated,
-                    AutoButtonColor = false,
-                    Text = currentMode,
-                    TextColor3 = Royalty.Theme.SubText,
-                    Font = Royalty.Tokens.Font.Medium,
-                    TextSize = 10,
-                    Parent = Row
-                }, {
-                    create("UICorner", { CornerRadius = UDim.new(0, 4) })
-                })
-                Royalty:BindThemeProperty(ctrlScope, ModeBtn, "BackgroundColor3", "SurfaceElevated")
-                Royalty:BindThemeProperty(ctrlScope, ModeBtn, "TextColor3", "SubText")
-
                 local KeyBtn = create("TextButton", {
-                    Size = UDim2.new(0, 60, 0, 22),
-                    Position = UDim2.new(1, -60, 0, 0),
+                    Size = UDim2.fromOffset(72, 24),
+                    Position = UDim2.new(1, -72, 0.5, -12),
                     BackgroundColor3 = Royalty.Theme.SurfaceElevated,
                     AutoButtonColor = false,
                     Text = "[" .. formatKeyName(currentKey) .. "]",
@@ -2900,6 +2987,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 })
                 Royalty:BindThemeProperty(ctrlScope, KeyStroke, "Color", "Border")
 
+                registerSectionItem(Row, kName .. " " .. (kDesc or ""))
+
                 function KeyObj:Set(newKey: any, silent: boolean?)
                     self.Key = newKey
                     Royalty.Flags[flag] = newKey
@@ -2917,38 +3006,32 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
                 function KeyObj:SetMode(newMode: string)
                     self.Mode = (string.lower(tostring(newMode)) == "hold") and "Hold" or "Toggle"
-                    ModeBtn.Text = self.Mode
                 end
 
                 function KeyObj:GetMode(): string
                     return self.Mode
                 end
 
-                ctrlScope:Connect(ModeBtn.Activated, function()
-                    KeyObj:SetMode(KeyObj.Mode == "Toggle" and "Hold" or "Toggle")
-                end)
-
                 ctrlScope:Connect(KeyBtn.Activated, function()
                     KeyObj.Binding = true
                     Window._isBindingKey = true
                     KeyBtn.Text = "[ ... ]"
-                    Royalty:Animate(KeyStroke, Royalty.Tokens.Animation.Fast, { Color = Royalty.Theme.Accent })
+                    Royalty:Animate(KeyStroke, Royalty.Tokens.Anim.Fast, { Color = Royalty.Theme.Accent })
                 end)
 
                 ctrlScope:Connect(UserInputService.InputBegan, function(input, gameProcessed)
                     if KeyObj.Binding then
-                        -- Escape cancela sem apagar a tecla anterior; Backspace/Delete limpa para None
                         if input.KeyCode == Enum.KeyCode.Escape then
                             KeyObj.Binding = false
                             task.defer(function() Window._isBindingKey = false end)
                             KeyBtn.Text = "[" .. formatKeyName(KeyObj.Key) .. "]"
-                            Royalty:Animate(KeyStroke, Royalty.Tokens.Animation.Fast, { Color = Royalty.Theme.Border })
+                            Royalty:Animate(KeyStroke, Royalty.Tokens.Anim.Fast, { Color = Royalty.Theme.Border })
                             return
                         elseif input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.Delete then
                             KeyObj.Binding = false
                             task.defer(function() Window._isBindingKey = false end)
                             KeyObj:Set(nil)
-                            Royalty:Animate(KeyStroke, Royalty.Tokens.Animation.Fast, { Color = Royalty.Theme.Border })
+                            Royalty:Animate(KeyStroke, Royalty.Tokens.Anim.Fast, { Color = Royalty.Theme.Border })
                             return
                         end
 
@@ -2965,12 +3048,11 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                             KeyObj.Binding = false
                             task.defer(function() Window._isBindingKey = false end)
                             KeyObj:Set(chosen)
-                            Royalty:Animate(KeyStroke, Royalty.Tokens.Animation.Fast, { Color = Royalty.Theme.Border })
+                            Royalty:Animate(KeyStroke, Royalty.Tokens.Anim.Fast, { Color = Royalty.Theme.Border })
                         end
                         return
                     end
 
-                    -- Ignora se o usuário estiver digitando em qualquer TextBox ou se conflitar com o ToggleKey da janela
                     if gameProcessed or UserInputService:GetFocusedTextBox() ~= nil then
                         return
                     end
@@ -3013,12 +3095,12 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
             end
 
             -- ----------------------------------------------------------------
-            -- 8. COLOR PICKER (HSV FIEL + INDICADORES + VALIDAÇÃO HEX)
+            -- 8. COLOR PICKER (HSV PRECISO + BARRAS RECUADAS SEM OVERFLOW)
             -- ----------------------------------------------------------------
             function Section:AddColorPicker(cCfg: { Name: string?, Description: string?, Default: Color3?, Flag: string?, Callback: ((color: Color3) -> ())? }?)
                 cCfg = cCfg or {}
                 local ctrlScope = secScope:NewChild()
-                local cName = tostring(cCfg.Name or "Color")
+                local cName = tostring(cCfg.Name or "Cor")
                 local cDesc = cCfg.Description and tostring(cCfg.Description) or nil
                 local currentColor: Color3 = typeof(cCfg.Default) == "Color3" and cCfg.Default or Royalty.Theme.Accent
                 local flag = tostring(cCfg.Flag or cName)
@@ -3033,21 +3115,19 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 Window._controlsByFlag[flag] = ColorObj
 
                 local Wrapper = create("Frame", {
-                    Size = UDim2.new(1, 0, 0, 0),
-                    AutomaticSize = Enum.AutomaticSize.Y,
+                    Size = UDim2.new(1, 0, 0, 26),
                     BackgroundTransparency = 1,
                     Parent = SecFrame
-                }, {
-                    create("UIListLayout", {
-                        SortOrder = Enum.SortOrder.LayoutOrder,
-                        Padding = UDim.new(0, 6)
-                    })
                 })
-                registerSectionItem(Wrapper, cName .. " " .. (cDesc or ""))
+                local WrapperLayout = create("UIListLayout", {
+                    SortOrder = Enum.SortOrder.LayoutOrder,
+                    Padding = UDim.new(0, 6),
+                    Parent = Wrapper
+                })
 
                 local TopRow = create("TextButton", {
                     LayoutOrder = 1,
-                    Size = UDim2.new(1, 0, 0, 24),
+                    Size = UDim2.new(1, 0, 0, 26),
                     BackgroundTransparency = 1,
                     AutoButtonColor = false,
                     Text = "",
@@ -3055,20 +3135,21 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 })
 
                 local TitleLbl = create("TextLabel", {
-                    Size = UDim2.new(1, -50, 1, 0),
+                    Size = UDim2.new(1, -52, 1, 0),
                     BackgroundTransparency = 1,
                     Text = cName,
                     TextColor3 = Royalty.Theme.Text,
                     Font = Royalty.Tokens.Font.Medium,
                     TextSize = Royalty.Tokens.TextSize.Control,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Parent = TopRow
                 })
                 Royalty:BindThemeProperty(ctrlScope, TitleLbl, "TextColor3", "Text")
 
                 local SwatchBtn = create("Frame", {
-                    Size = UDim2.new(0, 38, 0, 20),
-                    Position = UDim2.new(1, -38, 0.5, -10),
+                    Size = UDim2.fromOffset(40, 20),
+                    Position = UDim2.new(1, -40, 0.5, -10),
                     BackgroundColor3 = currentColor,
                     Parent = TopRow
                 }, {
@@ -3078,17 +3159,16 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
                 local PickerPanel = create("Frame", {
                     LayoutOrder = 2,
-                    Size = UDim2.new(1, 0, 0, 0),
-                    AutomaticSize = Enum.AutomaticSize.Y,
+                    Size = UDim2.new(1, 0, 0, 114),
                     BackgroundColor3 = Royalty.Theme.Sidebar,
                     Visible = false,
                     Parent = Wrapper
                 }, {
-                    create("UICorner", { CornerRadius = Royalty.Tokens.CornerRadius.Control }),
+                    create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Control }),
                     create("UIStroke", { Color = Royalty.Theme.Border, Thickness = 1 }),
                     create("UIPadding", {
-                        PaddingTop = UDim.new(0, 8),
-                        PaddingBottom = UDim.new(0, 8),
+                        PaddingTop = UDim.new(0, 10),
+                        PaddingBottom = UDim.new(0, 10),
                         PaddingLeft = UDim.new(0, 10),
                         PaddingRight = UDim.new(0, 10)
                     }),
@@ -3099,6 +3179,13 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 })
                 Royalty:BindThemeProperty(ctrlScope, PickerPanel, "BackgroundColor3", "Sidebar")
 
+                ctrlScope:Connect(WrapperLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+                    Wrapper.Size = UDim2.new(1, 0, 0, WrapperLayout.AbsoluteContentSize.Y)
+                    Section:_updateHeight()
+                end)
+
+                registerSectionItem(Wrapper, cName .. " " .. (cDesc or ""))
+
                 local function createHSVBar(order: number, labelText: string)
                     local row = create("Frame", {
                         LayoutOrder = order,
@@ -3107,7 +3194,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                         Parent = PickerPanel
                     })
                     local lbl = create("TextLabel", {
-                        Size = UDim2.new(0, 16, 1, 0),
+                        Size = UDim2.fromOffset(16, 18),
                         BackgroundTransparency = 1,
                         Text = labelText,
                         TextColor3 = Royalty.Theme.Muted,
@@ -3118,24 +3205,25 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                     })
                     Royalty:BindThemeProperty(ctrlScope, lbl, "TextColor3", "Muted")
 
+                    -- Recuo de 4px à direita para o cursor nunca ultrapassar a caixa
                     local bar = create("Frame", {
-                        Size = UDim2.new(1, -22, 0, 10),
+                        Size = UDim2.new(1, -26, 0, 10),
                         Position = UDim2.new(0, 22, 0.5, -5),
                         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
                         BorderSizePixel = 0,
                         Active = true,
                         Parent = row
                     }, {
-                        create("UICorner", { CornerRadius = Royalty.Tokens.CornerRadius.Pill }),
+                        create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Pill }),
                         create("UIStroke", { Color = Royalty.Theme.Border, Thickness = 1 })
                     })
 
                     local grad = create("UIGradient", { Parent = bar })
 
                     local cursor = create("Frame", {
-                        Size = UDim2.new(0, 8, 0, 14),
+                        Size = UDim2.fromOffset(8, 14),
                         AnchorPoint = Vector2.new(0.5, 0.5),
-                        Position = UDim2.new(0, 0, 0.5, 0),
+                        Position = UDim2.fromScale(0, 0.5),
                         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
                         BorderSizePixel = 0,
                         Parent = bar
@@ -3169,7 +3257,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 })
 
                 local RGBLabel = create("TextLabel", {
-                    Size = UDim2.new(0.55, 0, 1, 0),
+                    Size = UDim2.new(1, -92, 1, 0),
                     BackgroundTransparency = 1,
                     Text = "",
                     TextColor3 = Royalty.Theme.SubText,
@@ -3181,8 +3269,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 Royalty:BindThemeProperty(ctrlScope, RGBLabel, "TextColor3", "SubText")
 
                 local HexBox = create("TextBox", {
-                    Size = UDim2.new(0.42, 0, 1, 0),
-                    Position = UDim2.new(0.58, 0, 0, 0),
+                    Size = UDim2.fromOffset(84, 24),
+                    Position = UDim2.new(1, -84, 0, 0),
                     BackgroundColor3 = Royalty.Theme.Surface,
                     Text = colorToHex(currentColor),
                     PlaceholderText = "#RRGGBB",
@@ -3207,19 +3295,17 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                     local pureHue = Color3.fromHSV(h, 1, 1)
                     local fullValColor = Color3.fromHSV(h, s, 1)
 
-                    -- Saturação vai de Branco até a cor da Matiz atual
                     SatGrad.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), pureHue)
-                    -- Valor/Brilho vai de Preto até a cor saturada atual
                     ValGrad.Color = ColorSequence.new(Color3.fromRGB(0, 0, 0), fullValColor)
 
-                    HueCursor.Position = UDim2.new(math.clamp(h, 0, 1), 0, 0.5, 0)
-                    SatCursor.Position = UDim2.new(math.clamp(s, 0, 1), 0, 0.5, 0)
-                    ValCursor.Position = UDim2.new(math.clamp(v, 0, 1), 0, 0.5, 0)
+                    HueCursor.Position = UDim2.fromScale(math.clamp(h, 0, 1), 0.5)
+                    SatCursor.Position = UDim2.fromScale(math.clamp(s, 0, 1), 0.5)
+                    ValCursor.Position = UDim2.fromScale(math.clamp(v, 0, 1), 0.5)
 
                     local c = ColorObj.Value
                     SwatchBtn.BackgroundColor3 = c
                     RGBLabel.Text = string.format(
-                        "%d, %d, %d",
+                        "RGB: %d, %d, %d",
                         math.floor(c.R * 255 + 0.5),
                         math.floor(c.G * 255 + 0.5),
                         math.floor(c.B * 255 + 0.5)
@@ -3246,7 +3332,6 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                     return self.Value
                 end
 
-                -- Uma única conexão compartilhada de InputChanged/Ended para as 3 barras do Picker
                 local activeBarMode: string? = nil
                 local function updateBarFromX(barMode: string, xPos: number)
                     local targetBar = (barMode == "H" and HueBar) or (barMode == "S" and SatBar) or ValBar
@@ -3303,7 +3388,6 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                         HexStroke.Color = Royalty.Theme.Border
                         ColorObj:Set(parsed)
                     else
-                        -- Sinaliza erro visual sem corromper o valor atual
                         HexStroke.Color = Royalty.Theme.Error
                         task.delay(0.8, function()
                             if HexBox and HexBox.Parent then
@@ -3320,7 +3404,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                     if ColorObj.Open then
                         syncPickerVisuals()
                     end
-                    Tab:_updateColumns()
+                    Wrapper.Size = UDim2.new(1, 0, 0, WrapperLayout.AbsoluteContentSize.Y)
+                    Section:_updateHeight()
                 end)
 
                 syncPickerVisuals()
@@ -3328,12 +3413,12 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
             end
 
             -- ----------------------------------------------------------------
-            -- 9. INPUT (TEXTBOX COM VALIDAÇÃO, LIMITE E ESTADOS DE FOCO)
+            -- 9. INPUT (TEXTBOX)
             -- ----------------------------------------------------------------
             function Section:AddInput(iCfg: { Name: string?, Description: string?, Placeholder: string?, Default: string?, MaxLength: number?, CallbackOnType: boolean?, Validator: ((txt: string) -> boolean)?, Flag: string?, Callback: ((txt: string) -> ())? }?)
                 iCfg = iCfg or {}
                 local ctrlScope = secScope:NewChild()
-                local iName = tostring(iCfg.Name or "Input")
+                local iName = tostring(iCfg.Name or "Campo de Texto")
                 local iDesc = iCfg.Description and tostring(iCfg.Description) or nil
                 local placeholder = tostring(iCfg.Placeholder or "Digite aqui...")
                 local maxLen = tonumber(iCfg.MaxLength)
@@ -3341,6 +3426,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 local validator = iCfg.Validator
                 local flag = tostring(iCfg.Flag or iName)
                 local callback = iCfg.Callback
+
+                local hasDesc = (iDesc ~= nil and iDesc ~= "")
 
                 local currentText = tostring(iCfg.Default or "")
                 if maxLen and #currentText > maxLen then
@@ -3352,42 +3439,34 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 Window._controlsByFlag[flag] = InputObj
 
                 local Container = create("Frame", {
-                    Size = UDim2.new(1, 0, 0, 0),
-                    AutomaticSize = Enum.AutomaticSize.Y,
+                    Size = UDim2.new(1, 0, 0, hasDesc and 70 or 52),
                     BackgroundTransparency = 1,
                     Parent = SecFrame
-                }, {
-                    create("UIListLayout", {
-                        SortOrder = Enum.SortOrder.LayoutOrder,
-                        Padding = UDim.new(0, 5)
-                    })
                 })
-                registerSectionItem(Container, iName .. " " .. (iDesc or ""))
 
                 local TitleLbl = create("TextLabel", {
-                    LayoutOrder = 1,
                     Size = UDim2.new(1, 0, 0, 16),
                     BackgroundTransparency = 1,
                     Text = iName,
                     TextColor3 = Royalty.Theme.Text,
                     Font = Royalty.Tokens.Font.Medium,
                     TextSize = Royalty.Tokens.TextSize.Control,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Parent = Container
                 })
                 Royalty:BindThemeProperty(ctrlScope, TitleLbl, "TextColor3", "Text")
 
-                if iDesc and iDesc ~= "" then
+                if hasDesc then
                     local DescLbl = create("TextLabel", {
-                        LayoutOrder = 2,
-                        Size = UDim2.new(1, 0, 0, 0),
-                        AutomaticSize = Enum.AutomaticSize.Y,
+                        Size = UDim2.new(1, 0, 0, 15),
+                        Position = UDim2.fromOffset(0, 18),
                         BackgroundTransparency = 1,
-                        Text = iDesc,
+                        Text = iDesc :: string,
                         TextColor3 = Royalty.Theme.Muted,
                         Font = Royalty.Tokens.Font.Regular,
                         TextSize = Royalty.Tokens.TextSize.Small,
-                        TextWrapped = true,
+                        TextTruncate = Enum.TextTruncate.AtEnd,
                         TextXAlignment = Enum.TextXAlignment.Left,
                         Parent = Container
                     })
@@ -3395,12 +3474,12 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 end
 
                 local BoxHolder = create("Frame", {
-                    LayoutOrder = 3,
-                    Size = UDim2.new(1, 0, 0, 30),
+                    Size = UDim2.new(1, 0, 0, 32),
+                    Position = UDim2.new(0, 0, 1, -32),
                     BackgroundColor3 = Royalty.Theme.SurfaceElevated,
                     Parent = Container
                 }, {
-                    create("UICorner", { CornerRadius = Royalty.Tokens.CornerRadius.Control })
+                    create("UICorner", { CornerRadius = Royalty.Tokens.Corner.Control })
                 })
                 Royalty:BindThemeProperty(ctrlScope, BoxHolder, "BackgroundColor3", "SurfaceElevated")
 
@@ -3412,8 +3491,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 Royalty:BindThemeProperty(ctrlScope, BoxStroke, "Color", "Border")
 
                 local Box = create("TextBox", {
-                    Size = UDim2.new(1, -16, 1, 0),
-                    Position = UDim2.new(0, 8, 0, 0),
+                    Size = UDim2.new(1, -20, 1, 0),
+                    Position = UDim2.fromOffset(10, 0),
                     BackgroundTransparency = 1,
                     Text = currentText,
                     PlaceholderText = placeholder,
@@ -3429,6 +3508,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 Royalty:BindThemeProperty(ctrlScope, Box, "TextColor3", "Text")
                 Royalty:BindThemeProperty(ctrlScope, Box, "PlaceholderColor3", "Muted")
 
+                registerSectionItem(Container, iName .. " " .. (iDesc or ""))
+
                 function InputObj:Set(newText: string, silent: boolean?)
                     local str = tostring(newText or "")
                     if maxLen and #str > maxLen then
@@ -3437,7 +3518,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                     if type(validator) == "function" then
                         local ok, valid = safeCall("InputValidator:" .. iName, validator, str)
                         if not ok or valid == false then
-                            Royalty:Animate(BoxStroke, Royalty.Tokens.Animation.Fast, { Color = Royalty.Theme.Error })
+                            Royalty:Animate(BoxStroke, Royalty.Tokens.Anim.Fast, { Color = Royalty.Theme.Error })
                             Box.Text = self.Value
                             return
                         end
@@ -3459,7 +3540,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 end
 
                 ctrlScope:Connect(Box.Focused, function()
-                    Royalty:Animate(BoxStroke, Royalty.Tokens.Animation.Fast, { Color = Royalty.Theme.Accent })
+                    Royalty:Animate(BoxStroke, Royalty.Tokens.Anim.Fast, { Color = Royalty.Theme.Accent })
                 end)
 
                 ctrlScope:Connect(Box:GetPropertyChangedSignal("Text"), function()
@@ -3473,7 +3554,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 end)
 
                 ctrlScope:Connect(Box.FocusLost, function()
-                    Royalty:Animate(BoxStroke, Royalty.Tokens.Animation.Fast, { Color = Royalty.Theme.Border })
+                    Royalty:Animate(BoxStroke, Royalty.Tokens.Anim.Fast, { Color = Royalty.Theme.Border })
                     InputObj:Set(Box.Text)
                 end)
 
@@ -3487,18 +3568,18 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
     end
 
     -- ========================================================================
-    -- 8. ABA DE CONFIGURAÇÕES CONECTADA AO ESTADO REAL DA BIBLIOTECA
+    -- 8. ABA DE CONFIGURAÇÕES (COLUNA ÚNICA AMPLA + ROLAGEM COMPLETA)
     -- ========================================================================
     function Window:AddSettingsTab(tabTitle: string?)
-        local SettingsTab = self:AddTab(tabTitle or "Settings")
-        local AppearanceSec = SettingsTab:AddSection("Aparência & Tema", "Left")
-        local SystemSec = SettingsTab:AddSection("Interface & Perfis", "Right")
+        -- Usa ForceSingleColumn = true para nunca espremer controles nas configurações
+        local SettingsTab = self:AddTab(tabTitle or "Configurações", true)
+        local AppearanceSec = SettingsTab:AddSection("Aparência e Tema", "Left")
+        local SystemSec = SettingsTab:AddSection("Interface e Perfis", "Left")
 
         AppearanceSec:AddDropdown({
-            Name = "Esquema de Cores",
-            Description = "Alterna todas as superfícies e textos da biblioteca.",
-            Options = { "Dark", "Light" },
-            Default = Royalty.Theme.Name or "Dark",
+            Name = "Tema da Interface",
+            Options = { "Escuro", "Claro" },
+            Default = (Royalty.Theme.Name == "Claro") and "Claro" or "Escuro",
             Flag = "Royalty_ThemeMode",
             Callback = function(selected)
                 Royalty:SetTheme(selected)
@@ -3506,7 +3587,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
         })
 
         local AccentPicker = AppearanceSec:AddColorPicker({
-            Name = "Cor de Destaque (Accent)",
+            Name = "Cor de Destaque",
             Default = Royalty.Theme.Accent,
             Flag = "Royalty_AccentColor",
             Callback = function(color)
@@ -3515,17 +3596,17 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
         })
 
         AppearanceSec:AddDropdown({
-            Name = "Predefinições de Destaque",
-            Options = { "Royalty Blue", "Emerald", "Amber", "Crimson", "Violet" },
-            Default = "Royalty Blue",
+            Name = "Predefinição de Cor",
+            Options = { "Azul Royalty", "Esmeralda", "Âmbar", "Carmesim", "Violeta" },
+            Default = "Azul Royalty",
             Flag = "Royalty_AccentPreset",
             Callback = function(preset)
                 local map = {
-                    ["Royalty Blue"] = Color3.fromRGB(94, 129, 244),
-                    ["Emerald"] = Color3.fromRGB(52, 199, 123),
-                    ["Amber"] = Color3.fromRGB(245, 166, 35),
-                    ["Crimson"] = Color3.fromRGB(239, 83, 80),
-                    ["Violet"] = Color3.fromRGB(155, 107, 255)
+                    ["Azul Royalty"] = Color3.fromRGB(88, 124, 244),
+                    ["Esmeralda"] = Color3.fromRGB(48, 194, 118),
+                    ["Âmbar"] = Color3.fromRGB(242, 164, 36),
+                    ["Carmesim"] = Color3.fromRGB(236, 82, 78),
+                    ["Violeta"] = Color3.fromRGB(152, 104, 252)
                 }
                 if map[preset] then
                     AccentPicker:Set(map[preset])
@@ -3534,19 +3615,8 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
         })
 
         AppearanceSec:AddToggle({
-            Name = "Movimento Reduzido",
-            Description = "Desativa animações longas mantendo mudanças de estado imediatas.",
-            Default = Royalty.ReducedMotion,
-            Flag = "Royalty_ReducedMotion",
-            CallOnInit = false,
-            Callback = function(state)
-                Royalty:SetReducedMotion(state)
-            end
-        })
-
-        AppearanceSec:AddToggle({
-            Name = "Blur de Profundidade",
-            Description = "Aplica desfoque no mundo 3D enquanto a janela estiver aberta.",
+            Name = "Desfoque de Fundo (Blur)",
+            Description = "Desfoca e escurece o cenário enquanto o menu estiver aberto.",
             Default = self.UseBlur,
             Flag = "Royalty_UseBlur",
             CallOnInit = false,
@@ -3556,11 +3626,20 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
             end
         })
 
+        AppearanceSec:AddToggle({
+            Name = "Movimento Reduzido",
+            Default = Royalty.ReducedMotion,
+            Flag = "Royalty_ReducedMotion",
+            CallOnInit = false,
+            Callback = function(state)
+                Royalty:SetReducedMotion(state)
+            end
+        })
+
         SystemSec:AddSlider({
-            Name = "Escala da Interface",
-            Description = "Ajusta o dimensionamento proporcional da janela.",
+            Name = "Escala da Janela",
             Min = 0.80,
-            Max = 1.25,
+            Max = 1.20,
             Default = self.Scale,
             Rounding = 2,
             Suffix = "x",
@@ -3571,7 +3650,7 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
         })
 
         SystemSec:AddKeybind({
-            Name = "Tecla de Alternância da UI",
+            Name = "Atalho para Ocultar Menu",
             Default = self.ToggleKey,
             Mode = "Toggle",
             Flag = "Royalty_ToggleKey",
@@ -3594,21 +3673,20 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
 
         local profileInput = SystemSec:AddInput({
             Name = "Nome do Perfil",
-            Placeholder = "Default",
-            Default = "Default",
+            Placeholder = "Padrao",
+            Default = "Padrao",
             MaxLength = 24,
             Flag = "Royalty_ProfileName"
         })
 
         SystemSec:AddButton({
-            Name = "Salvar Configuração Atual",
-            Description = Royalty.StorageAdapter and "Grava os controles via StorageAdapter." or "Salva na memória da sessão atual.",
+            Name = "Salvar Configuração",
             Callback = function()
                 local ok, msg = Royalty:SaveConfiguration(profileInput:Get())
                 Royalty:Notify({
                     Title = "Configurações",
                     Content = msg,
-                    Type = ok and "Success" or "Error",
+                    Type = ok and "Sucesso" or "Erro",
                     Duration = 3
                 })
             end
@@ -3621,14 +3699,14 @@ function Royalty:CreateWindow(cfg: { [string]: any }?)
                 Royalty:Notify({
                     Title = "Configurações",
                     Content = msg,
-                    Type = ok and "Success" or "Warning",
+                    Type = ok and "Sucesso" or "Aviso",
                     Duration = 3
                 })
             end
         })
 
         SystemSec:AddButton({
-            Name = "Encerrar Janela (Unload)",
+            Name = "Encerrar Interface",
             Callback = function()
                 self:Destroy()
             end
